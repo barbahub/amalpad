@@ -12,7 +12,6 @@
     0% { transform: translateX(-150%) skewX(-12deg); }
     100% { transform: translateX(250%) skewX(-12deg); }
 }
-/* ... existing code ... */
 
 /* --- TAMBAHAN UNTUK TOKO FLEXING --- */
 @keyframes float {
@@ -31,4 +30,86 @@
 .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+
+/* =========================================
+   --- AURA PREMIUM (TIER SSS & VIP SR) --- 
+   ========================================= */
+
+/* --- 1. AURA TIER SSS (SULTAN / EMAS) --- */
+.name-aura-sss {
+    background: linear-gradient(90deg, #FFD700, #FFFFFF, #FF8C00, #FFD700) !important;
+    background-size: 200% auto !important;
+    color: transparent !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    animation: textShine 3s linear infinite !important;
+    text-shadow: 0px 0px 10px rgba(255, 215, 0, 0.4);
+}
+
+.avatar-aura-sss {
+    position: relative;
+    /* Memberikan border transparan agar tidak nabrak dengan background bawaan */
+    border: 2px solid transparent !important; 
+}
+
+.avatar-aura-sss::after {
+    content: '';
+    position: absolute;
+    top: -6px; right: -6px; bottom: -6px; left: -6px; 
+    border-radius: 50%;
+    background: linear-gradient(45deg, #FFD700, #FF8C00, #FFFACD, #FFD700);
+    background-size: 300% 300%;
+    z-index: -1; 
+    animation: auraSpin 3s linear infinite, auraPulseSSS 2s ease-in-out infinite;
+}
+
+@keyframes auraPulseSSS {
+    0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.9); }
+    100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+}
+
+/* --- 2. AURA TIER VIP / SR (UNGU MISTIS & CYAN) --- */
+.name-aura-vip {
+    background: linear-gradient(90deg, #b026ff, #e8b3ff, #00d4ff, #b026ff) !important;
+    background-size: 200% auto !important;
+    color: transparent !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    animation: textShine 3s linear infinite !important;
+    text-shadow: 0px 0px 10px rgba(176, 38, 255, 0.5);
+}
+
+.avatar-aura-vip {
+    position: relative;
+    border: 2px solid transparent !important; 
+}
+
+.avatar-aura-vip::after {
+    content: '';
+    position: absolute;
+    top: -5px; right: -5px; bottom: -5px; left: -5px; 
+    border-radius: 50%;
+    background: linear-gradient(45deg, #b026ff, #00d4ff, #ff26b9, #b026ff);
+    background-size: 300% 300%;
+    z-index: -1;
+    animation: auraSpin 3s linear infinite, auraPulseVIP 2s ease-in-out infinite;
+}
+
+@keyframes auraPulseVIP {
+    0% { box-shadow: 0 0 8px rgba(176, 38, 255, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.8); }
+    100% { box-shadow: 0 0 8px rgba(176, 38, 255, 0.5); }
+}
+
+/* --- KEYFRAMES UMUM AURA --- */
+@keyframes textShine {
+    to { background-position: 200% center; }
+}
+
+@keyframes auraSpin {
+    0% { background-position: 0% 50%; transform: rotate(0deg); }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; transform: rotate(360deg); }
 }
