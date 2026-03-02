@@ -67,15 +67,31 @@ window.fetchLeaderboard = async function() {
                     let safeInitial = safeName.charAt(0).toUpperCase();
                     let safeExp = userL.monthly_exp || 0;
                     
+                    // --- BACA EFEK KOSMETIK PLAYER ---
+                    let equipped = userL.equippedItems || {};
+                    let fxStyles = window.previewStyles || {};
+                    
+                    let nameFxClass = equipped.name_fx ? fxStyles[equipped.name_fx] : '';
+                    let auraClass = '';
+                    
+                    // Aturan khusus Aura
+                    if (equipped.aura === 'aura_sss') auraClass = 'avatar-aura-sss border-transparent !text-white';
+                    else if (equipped.aura === 'aura_vip') auraClass = 'avatar-aura-vip border-transparent !text-white';
+                    else if (equipped.aura) auraClass = (fxStyles[equipped.aura] || '').replace('scale-110', 'scale-100'); // Kecilkan sedikit untuk list
+                    
                     let photoHTML = userL.photo 
-                        ? `<img src="${userL.photo}" class="w-full h-full rounded-full object-cover" onerror="this.style.display='none'; this.parentNode.innerText='${safeInitial}'">` 
-                        : safeInitial;
+                        ? `<img src="${userL.photo}" class="w-full h-full rounded-full object-cover relative z-10" onerror="this.style.display='none'; this.parentNode.innerText='${safeInitial}'">` 
+                        : `<span class="relative z-10">${safeInitial}</span>`;
                     
                     el.innerHTML = `
                         <div class="flex items-center gap-3">
                             <span class="font-black text-lg w-5 text-center">${rank}</span>
-                            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs uppercase overflow-hidden">${photoHTML}</div>
-                            <span class="font-bold text-sm text-white truncate max-w-[120px] hover:text-yellow-300 transition">${safeName}</span>
+                            
+                            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs uppercase overflow-visible relative ${auraClass}">
+                                ${photoHTML}
+                            </div>
+                            
+                            <span class="font-bold text-sm text-white truncate max-w-[120px] transition ${nameFxClass}">${safeName}</span>
                         </div>
                         <span class="text-xs font-black bg-black/30 px-2 py-1 rounded-lg">${safeExp} EXP</span>`;
                     
