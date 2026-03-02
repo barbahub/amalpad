@@ -1,4 +1,4 @@
-// --- INSISIALISASI DATA TOKO ---
+// --- INSIALISASI DATA TOKO ---
 // Mengambil data Koin dari localStorage (Pastikan tersinkronisasi dengan Firebase milikmu di app aslinya)
 window.totalKoin = parseInt(localStorage.getItem('totalKoin') || 10000); 
 
@@ -13,6 +13,7 @@ window.shopCatalog = [
     { id: "tasbih_kayu", name: "Kayu Kokka", price: 10000, icon: "🪵", type: "tasbih_skin", desc: "Desain klasik kayu kokka yang menenangkan hati." },
     { id: "tasbih_kristal", name: "Kristal Makkah", price: 18000, icon: "💎", type: "tasbih_skin", desc: "Tombol tasbih mewah berkilau layaknya permata." },
     { id: "tasbih_cyber", name: "Mecha Digital", price: 20000, icon: "🤖", type: "tasbih_skin", desc: "Desain tasbih futuristik dengan garis LED hijau." },
+    { id: "tasbih_sss", name: "Tasbih Naga Emas", price: 0, icon: "🐉", type: "tasbih_skin", desc: "Tasbih mistis dari sisik naga emas! Eksklusif Gacha Premium.", gachaOnly: true },
     { id: "name_api", name: "Teks Membara", price: 12000, icon: "🔥", type: "name_fx", desc: "Namamu menyala dengan efek api merah di leaderboard." },
     { id: "name_neon", name: "Cyberpunk Neon", price: 15000, icon: "🟣", type: "name_fx", desc: "Teks nama glow-in-the-dark bergaya neon futuristik." },
     { id: "name_gold", name: "Emas Sultan", price: 20000, icon: "✨", type: "name_fx", desc: "Nama berlapis emas berkilau ala sultan AmalPad." },
@@ -188,6 +189,10 @@ window.previewItem = function(itemId) {
             skinClass = "bg-gray-900 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5),inset_0_0_10px_rgba(16,185,129,0.5)] border-[4px]";
             textColor = "text-emerald-400 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]";
         }
+        if(item.id === 'tasbih_sss') {
+            skinClass = "bg-gradient-to-br from-yellow-600 via-amber-500 to-red-600 border-yellow-300 shadow-[0_0_25px_rgba(250,204,21,0.8),inset_0_-8px_15px_rgba(0,0,0,0.6)] border-[6px] animate-pulse";
+            textColor = "text-yellow-100 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]";
+        }
 
         canvas.innerHTML = `
             <div class="absolute inset-0 bg-gray-900 opacity-90 z-0"></div>
@@ -358,7 +363,8 @@ window.renderFeaturedItems();
 
 window.gachaPool = [
     { id: 'aura_sss', name: 'Aura Sultan SSS', type: 'cosmetic', tier: 'sss', probability: 0.01 }, // Peluang 1%
-    { id: 'aura_vip', name: 'Aura VIP SR', type: 'cosmetic', tier: 'sr', probability: 0.10 },     // Peluang 10%
+    { id: 'tasbih_sss', name: 'Tasbih Naga Emas (SSS)', type: 'cosmetic', tier: 'sss', probability: 0.02 }, // Peluang 2%
+    { id: 'aura_vip', name: 'Aura VIP SR', type: 'cosmetic', tier: 'sr', probability: 0.08 },     // Peluang 8%
     { id: 'rare_coins', name: 'Jackpot 1.000 Koin', type: 'currency', tier: 'rare', probability: 0.30, value: 1000 }, // Peluang 30%
     { id: 'item_buff', name: 'Ramuan 2x EXP', type: 'consumable', tier: 'common', probability: 0.59 } // Peluang 59%
 ];
@@ -407,11 +413,11 @@ window.rollGachaPremium = function() {
         if (window.unlockedItems.includes(wonItem.id)) {
             window.totalKoin += 500;
             localStorage.setItem('totalKoin', window.totalKoin);
-            msg += `Karena kamu sudah punya aura ini, hadiah dikonversi otomatis menjadi 500 Koin kompensasi!`;
+            msg += `Karena kamu sudah punya item ini, hadiah dikonversi otomatis menjadi 500 Koin kompensasi!`;
         } else {
             window.unlockedItems.push(wonItem.id);
             localStorage.setItem('unlockedItems', JSON.stringify(window.unlockedItems));
-            msg += `Wow! Aura eksklusif ini telah ditambahkan ke Rak Koleksimu dan bisa langsung dipakai.`;
+            msg += `Wow! Item eksklusif ini telah ditambahkan ke Rak Koleksimu dan bisa langsung dipakai.`;
         }
         
     } else if (wonItem.type === 'consumable') {
