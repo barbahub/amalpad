@@ -14,7 +14,7 @@ if(btnShare) {
     btnShare.addEventListener('click', async () => {
         btnShare.innerText = "⏳ Membuka Panel...";
         btnShare.disabled = true;
- 
+
         try {
             // Ambil info level
             let info = window.calculateLevelInfo ? window.calculateLevelInfo(window.totalExp) : {level: 1};
@@ -34,7 +34,7 @@ if(btnShare) {
             
             const cardExp = document.getElementById('card-exp');
             if(cardExp) cardExp.innerText = (window.totalExp || 0).toLocaleString('id-ID');
- 
+
             // 1.5 Set Info Circle Dinamis (DENGAN AUTO-GENERATE LOGO)
             const circleNameDisp = document.getElementById('circle-name-display');
             const circleLogoDisp = document.getElementById('circle-logo-display');
@@ -57,22 +57,22 @@ if(btnShare) {
                 document.getElementById('card-circle-name').innerText = "Solo Player";
                 document.getElementById('card-circle-logo').innerHTML = `<span class="text-2xl drop-shadow-md">👤</span>`;
             }
- 
+
             // 2. Set Foto Profil (DENGAN AUTO-GENERATE AVATAR)
             const avatarSrcEl = document.getElementById('avatar-initial');
             const cardAvatarDest = document.getElementById('card-avatar');
             if(avatarSrcEl && cardAvatarDest) {
                 // Jika sudah konek Google dan punya Foto Profil
                 if(avatarSrcEl.querySelector('img')) {
-                    cardAvatarDest.innerHTML = `<img src="${avatarSrcEl.querySelector('img').src}" crossorigin="anonymous" class="w-full h-full object-cover">`;
+                    cardAvatarDest.innerHTML = `<img src="${avatarSrcEl.querySelector('img').src}" crossorigin="anonymous" class="w-full h-full rounded-full object-cover">`;
                 } else { 
                     // JIKA TIDAK PUNYA FOTO: Generate avatar karakter otomatis berdasarkan Nama Player!
                     let seedPlayer = encodeURIComponent(playerName);
                     let autoAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seedPlayer}&backgroundColor=10b981`;
-                    cardAvatarDest.innerHTML = `<img src="${autoAvatarUrl}" crossorigin="anonymous" class="w-full h-full object-cover">`; 
+                    cardAvatarDest.innerHTML = `<img src="${autoAvatarUrl}" crossorigin="anonymous" class="w-full h-full rounded-full object-cover">`; 
                 }
             }
- 
+
             // 3. Set 6 Atribut
             const getStat = (val) => Math.min(99, Math.floor((val || 0) / 2) + 20);
             const radar = window.statsRadar || {};
@@ -82,14 +82,14 @@ if(btnShare) {
             let stSigma = getStat(radar.sigma);
             let stDerma = getStat(radar.derma);
             let stStoic = getStat(radar.stoic);
- 
+
             if(document.getElementById('stat-pusat')) document.getElementById('stat-pusat').innerText = stPusat;
             if(document.getElementById('stat-aura')) document.getElementById('stat-aura').innerText = stAura;
             if(document.getElementById('stat-peka')) document.getElementById('stat-peka').innerText = stPeka;
             if(document.getElementById('stat-sigma')) document.getElementById('stat-sigma').innerText = stSigma;
             if(document.getElementById('stat-derma')) document.getElementById('stat-derma').innerText = stDerma;
             if(document.getElementById('stat-stoic')) document.getElementById('stat-stoic').innerText = stStoic;
- 
+
             // 4. Kalkulasi Aura Dominan
             const allStats = { 'Pusat': stPusat, 'Aura': stAura, 'Peka': stPeka, 'Sigma': stSigma, 'Derma': stDerma, 'Stoic': stStoic };
             const domName = Object.keys(allStats).reduce((a, b) => allStats[a] > allStats[b] ? a : b);
@@ -99,7 +99,7 @@ if(btnShare) {
             const cardDomText = document.getElementById('card-dom-text');
             if(cardDomIcon) cardDomIcon.innerText = statEmojis[domName];
             if(cardDomText) cardDomText.innerText = domName;
- 
+
             // 5. Cek Rank Global
             const rankBanner = document.getElementById('card-rank-banner');
             if(rankBanner) rankBanner.classList.add('hidden'); 
@@ -118,7 +118,7 @@ if(btnShare) {
                     }
                 } catch(e) { console.warn("Rank fetch failed", e); }
             }
- 
+
             // 6. Buka Pop-Up
             setTimeout(() => {
                 if(cardPreviewModal) {
@@ -128,10 +128,67 @@ if(btnShare) {
                 btnShare.innerText = "🃏 Flex Prayer Card"; btnShare.disabled = false;
                 if(typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, zIndex: 1000, colors: ['#a855f7', '#eab308'] });
             }, 300);
- 
+
         } catch (err) {
             console.error(err);
             btnShare.innerText = "🃏 Flex Prayer Card"; btnShare.disabled = false;
+        }
+    });
+}
+
+// ============================================================================
+// BONUS SENIOR DEV: Fungsi Export Card menjadi Image PNG menggunakan html2canvas
+// ============================================================================
+const btnExport = document.getElementById('btn-export');
+if(btnExport) {
+    btnExport.addEventListener('click', async () => {
+        btnExport.innerText = "⏳ Memproses...";
+        btnExport.disabled = true;
+
+        try {
+            // Jika modal belum terbuka, kita auto-klik tombol share untuk mengisi data
+            if(cardPreviewModal && cardPreviewModal.classList.contains('hidden')) {
+                if(btnShare) btnShare.click(); 
+            }
+            
+            // Beri waktu sebentar agar gambar external (Dicebear/Foto Google) selesai di-load di DOM
+            setTimeout(async () => {
+                const cardEl = document.getElementById('export-card');
+                if(!cardEl) {
+                    alert("Waduh, komponen kartu tidak ditemukan!");
+                    btnExport.innerHTML = "📜 Cetak CV Akhirat";
+                    btnExport.disabled = false;
+                    return;
+                }
+
+                // Render menjadi gambar resolusi tinggi (scale: 2)
+                const canvas = await html2canvas(cardEl, {
+                    scale: 2, 
+                    useCORS: true, // Izinkan cross-origin image render agar foto profil ikut tampil
+                    backgroundColor: null, 
+                    logging: false
+                });
+
+                // Buat tag <a> virtual untuk auto-download gambar
+                const link = document.createElement('a');
+                link.download = `AmalPad_AuraCard_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Kembalikan status tombol
+                btnExport.innerHTML = "📜 Cetak CV Akhirat";
+                btnExport.disabled = false;
+                
+                // Tutup popup jika player hanya ingin mendownload tanpa memamerkan popupnya
+                setTimeout(() => window.closeCardPreview(), 500);
+
+            }, 1000); // Jeda 1 detik agar animasi pop-up dan loading gambar beres
+            
+        } catch (error) {
+            console.error("Gagal export PNG:", error);
+            alert("Sistem gagal mencetak gambar, coba gunakan tombol screenshot manual ya bos.");
+            btnExport.innerHTML = "📜 Cetak CV Akhirat";
+            btnExport.disabled = false;
         }
     });
 }
