@@ -106,11 +106,17 @@ window.updatePlayerUI = function() {
     if(inputQuote) inputQuote.value = window.playerData.quote;
     if(koinDisplay) koinDisplay.innerText = window.totalKoin.toLocaleString('id-ID');
 
-    // 2. Update Avatar Inisial
-    if (window.playerData.name && avatarInitial) {
-        avatarInitial.innerText = window.playerData.name.charAt(0).toUpperCase();
-    } else if (avatarInitial) {
-         avatarInitial.innerText = "A";
+    // 2. Update Avatar Inisial (Aman dari overwrite foto)
+    if (avatarInitial) {
+        const hasImage = avatarInitial.querySelector('img'); // Cek apakah sudah ada foto
+        if (!hasImage) {
+            // Hanya gunakan teks inisial huruf jika user TIDAK punya foto
+            if (window.playerData.name) {
+                avatarInitial.innerText = window.playerData.name.charAt(0).toUpperCase();
+            } else {
+                avatarInitial.innerText = "A";
+            }
+        }
     }
 
     // 3. Kalkulasi Info Level Terbaru (Berdasarkan Limit Break)
@@ -217,9 +223,12 @@ function savePlayerData() {
         localStorage.setItem('userQuote', inputQuote.value);
     }
     
-    // Update Inisial Avatar saat ngetik real-time
-    if (window.playerData.name && avatarInitial) {
-        avatarInitial.innerText = window.playerData.name.charAt(0).toUpperCase();
+    // Update Inisial Avatar saat ngetik real-time (Aman dari overwrite foto)
+    if (avatarInitial) {
+        const hasImage = avatarInitial.querySelector('img');
+        if (!hasImage && window.playerData.name) {
+            avatarInitial.innerText = window.playerData.name.charAt(0).toUpperCase();
+        }
     }
     
     localStorage.setItem('playerData', JSON.stringify(window.playerData));
