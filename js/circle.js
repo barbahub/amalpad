@@ -218,3 +218,44 @@ if(btnToggleCoop && containerCoop) {
         if(iconCoop) iconCoop.style.transform = containerCoop.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
     });
 }
+
+// --- LOGIKA REKAP CIRCLE ---
+const btnRekap = document.getElementById('btn-rekap-circle');
+
+// Cek setiap kali halaman dimuat
+function checkRekapStatus() {
+    if (!btnRekap) return; // Memastikan elemen ada agar tidak crash
+    
+    const today = new Date();
+    const isEndOfMonth = today.getDate() >= 28;
+    
+    if (isEndOfMonth) {
+        // Ubah tombol jadi aktif & menyala
+        btnRekap.className = "flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white font-black py-3.5 rounded-2xl transition shadow-lg shadow-blue-500/30 text-xs uppercase tracking-wide animate-pulse";
+        btnRekap.innerHTML = "🛡️ Buka Rekap Circle!";
+    }
+}
+
+// Jalankan saat di-load
+if (btnRekap) {
+    checkRekapStatus();
+
+    // Logika saat tombol diklik
+    btnRekap.addEventListener('click', () => {
+        const today = new Date();
+        const isEndOfMonth = today.getDate() >= 28;
+        
+        if (!window.userCircleId) {
+            alert("Kamu harus bergabung atau membuat Circle terlebih dahulu untuk melihat Laporan Tulang Punggung Circle!");
+            return;
+        }
+
+        if (!isEndOfMonth) {
+            alert("Sabar bos! Laporan Tulang Punggung Circle hanya bisa dibuka setiap tanggal 28-31 di akhir bulan. Terus kumpulkan EXP untuk Circle-mu!");
+            return;
+        }
+
+        // TODO: Buka Modal/Popup UI Konsep 4 di sini
+        alert("Membuka Data Rahasia Circle..."); 
+    });
+}
