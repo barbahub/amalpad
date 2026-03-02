@@ -2,8 +2,8 @@
 // --- INISIALISASI STATE & DATA (ANTI-CRASH) ---
 // ============================================================
 
-// Mengambil data dengan fallback aman untuk mencegah error JSON.parse(null)
-const getSafeJSON = (key, fallback) => {
+// Ubah nama fungsi menjadi getShopSafeJSON agar tidak bentrok dengan player.js
+const getShopSafeJSON = (key, fallback) => {
     try {
         const item = localStorage.getItem(key);
         return item ? JSON.parse(item) : fallback;
@@ -14,9 +14,9 @@ const getSafeJSON = (key, fallback) => {
 };
 
 window.totalKoin = parseInt(localStorage.getItem('totalKoin')) || 10000; 
-window.unlockedItems = getSafeJSON('unlockedItems', ["tasbih_kayu"]);
-window.inventory = getSafeJSON('inventory', {});
-window.equippedItems = getSafeJSON('equippedItems', { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null });
+window.unlockedItems = getShopSafeJSON('unlockedItems', ["tasbih_kayu"]);
+window.inventory = getShopSafeJSON('inventory', {});
+window.equippedItems = getShopSafeJSON('equippedItems', { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null });
 window.currentShopFilter = 'all';
 
 // Sinkronisasi UI Koin Awal
