@@ -142,6 +142,16 @@ window.buyItem = function(id, price) {
 window.renderFeaturedItems = function() {
     const container = document.getElementById('featured-items-container');
     if(!container) return;
+    
+    // --- PROTEKSI ANTI CRASH ---
+    if (!Array.isArray(window.unlockedItems)) {
+        window.unlockedItems = ["tasbih_kayu"]; // Paksa jadi array jika corrupt
+    }
+    if (!window.equippedItems || typeof window.equippedItems !== 'object') {
+        window.equippedItems = { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null };
+    }
+    // ---------------------------
+    
     container.innerHTML = '';
     
     const featuredIds = ['aura_sss', 'tiket_emas'];
@@ -185,6 +195,16 @@ window.renderFeaturedItems = function() {
 window.renderShop = function() {
     const container = document.getElementById('shop-container');
     if(!container) return; 
+    
+    // --- PROTEKSI ANTI CRASH ---
+    if (!Array.isArray(window.unlockedItems)) {
+        window.unlockedItems = ["tasbih_kayu"]; // Paksa jadi array jika corrupt
+    }
+    if (!window.equippedItems || typeof window.equippedItems !== 'object') {
+        window.equippedItems = { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null };
+    }
+    // ---------------------------
+    
     container.innerHTML = ''; 
     
     const filteredItems = window.shopCatalog.filter(item => window.currentShopFilter === 'all' || item.type === window.currentShopFilter);
@@ -241,9 +261,10 @@ window.renderShop = function() {
             </div>
             
             <h3 class="font-black text-[12px] text-gray-800 dark:text-gray-100 mb-0.5 leading-tight w-full truncate px-1 relative z-10">${item.name}</h3>
-            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-medium mb-3 w-full truncate relative z-10">${item.desc}</p>
             
-            <div class="w-full mt-auto pt-2 border-t border-gray-100 dark:border-gray-700/50 relative z-10">
+            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-medium mb-3 w-full line-clamp-2 h-[28px] relative z-10">${item.desc}</p>
+            
+            <div class="w-full mt-auto pt-2 border-t border-gray-100 dark:border-gray-700/50 relative z-10 flex flex-col justify-end">
                 ${actionHTML}
             </div>
         `;
@@ -388,7 +409,7 @@ window.closeShopPreview = function() {
 window.gachaPool = [
     { id: 'aura_sss', name: 'Aura Sultan SSS', type: 'cosmetic', tier: 'sss', probability: 0.01 }, 
     { id: 'tasbih_sss', name: 'Tasbih Naga Emas (SSS)', type: 'cosmetic', tier: 'sss', probability: 0.02 }, 
-    { id: 'aura_vip', name: 'Aura VIP SR', type: 'cosmetic', tier: 'sr', probability: 0.08 },      
+    { id: 'aura_vip', name: 'Aura VIP SR', type: 'cosmetic', tier: 'sr', probability: 0.08 },       
     { id: 'rare_coins', name: 'Jackpot 1.000 Koin', type: 'currency', tier: 'rare', probability: 0.30, value: 1000 }, 
     { id: 'item_buff', name: 'Ramuan 2x EXP', type: 'consumable', tier: 'common', probability: 0.59 } 
 ];
