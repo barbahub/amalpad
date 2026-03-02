@@ -1,15 +1,30 @@
 // ============================================================
 // --- LIVE FEED SYSTEM & POP-UPS ---
 // ============================================================
-window.pushToLiveFeed = function(title, desc, type = 'task', extraValue = null) {
+window.pushToLiveFeed = function(title, desc, type = 'task', extraValue = null, equipped = null) {
     const feedContainer = document.getElementById('live-feed-container');
     if(!feedContainer) return;
     if(feedContainer.querySelector('p.text-gray-400')) feedContainer.innerHTML = ''; 
     
+    // Jika tidak dioper, ambil milik user sendiri
+    if(!equipped) {
+        try { equipped = JSON.parse(localStorage.getItem('equippedItems')) || {}; } catch(e) { equipped = {}; }
+    }
+    
+    let fxStyles = window.previewStyles || {};
+    let nameFxClass = equipped.name_fx && type !== 'circle_update' ? fxStyles[equipped.name_fx] : 'text-gray-800 dark:text-gray-200';
+    let auraClass = '';
+    
+    if (type !== 'circle_update') {
+        if (equipped.aura === 'aura_sss') auraClass = 'avatar-aura-sss border-transparent text-white';
+        else if (equipped.aura === 'aura_vip') auraClass = 'avatar-aura-vip border-transparent text-white';
+        else if (equipped.aura) auraClass = (fxStyles[equipped.aura] || '').replace('scale-110', 'scale-100');
+    }
+
     const item = document.createElement('div');
     let iconHtml = '';
     let bgClass = 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700';
-    let titleClass = 'text-gray-800 dark:text-gray-200';
+    let titleClass = nameFxClass; // Memasukkan efek teks ke variabel title
     let descClass = 'text-emerald-600 dark:text-emerald-400';
     let rightBadge = '';
     let onClickHtml = '';
@@ -19,14 +34,15 @@ window.pushToLiveFeed = function(title, desc, type = 'task', extraValue = null) 
 
     if (type === 'task') {
         const initial = title.charAt(0).toUpperCase();
-        iconHtml = `<div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 text-xs font-bold uppercase shrink-0">${initial}</div>`;
+        // Terapkan Aura di Icon
+        iconHtml = `<div class="relative w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 text-xs font-bold uppercase shrink-0 overflow-visible ${auraClass}"><span class="relative z-10">${initial}</span></div>`;
         rightBadge = `<span class="text-[10px] font-black text-yellow-500 bg-yellow-50 dark:bg-yellow-900/30 px-2 py-1 rounded-lg shrink-0">+${extraValue}</span>`;
         onClickHtml = `onclick="window.showUserPopup('${safeTitle}', '${safeDesc}', '${initial}')"`;
     } else if (type === 'user_level') {
         const initial = title.charAt(0).toUpperCase();
-        iconHtml = `<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-md shrink-0">🌟</div>`;
+        iconHtml = `<div class="relative w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-md shrink-0 overflow-visible ${auraClass}"><span class="relative z-10">🌟</span></div>`;
         bgClass = 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200 dark:border-yellow-700/50';
-        titleClass = 'text-yellow-700 dark:text-yellow-400';
+        titleClass = equipped.name_fx ? nameFxClass : 'text-yellow-700 dark:text-yellow-400';
         descClass = 'text-orange-600 dark:text-orange-300';
         onClickHtml = `onclick="window.showUserPopup('${safeTitle}', '${safeDesc}', '${initial}')"`;
     } else if (type === 'circle_update') {
