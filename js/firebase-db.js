@@ -24,6 +24,8 @@ window.getDocs = getDocs;
 window.query = query;
 window.collection = collection;
 window.where = where;
+window.doc = doc;
+window.getDoc = getDoc;
 
 const btnLogin = document.getElementById('btn-login');
 const btnLogout = document.getElementById('btn-logout');
