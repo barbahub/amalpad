@@ -150,6 +150,9 @@ window.renderFeaturedItems = function() {
     if (!window.equippedItems || typeof window.equippedItems !== 'object') {
         window.equippedItems = { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null };
     }
+    if (!window.inventory || typeof window.inventory !== 'object') {
+        window.inventory = {}; // Mencegah crash pembacaan inventory
+    }
     // ---------------------------
     
     container.innerHTML = '';
@@ -203,6 +206,9 @@ window.renderShop = function() {
     if (!window.equippedItems || typeof window.equippedItems !== 'object') {
         window.equippedItems = { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null };
     }
+    if (!window.inventory || typeof window.inventory !== 'object') {
+        window.inventory = {}; // Mencegah crash pembacaan inventory
+    }
     // ---------------------------
     
     container.innerHTML = ''; 
@@ -234,7 +240,7 @@ window.renderShop = function() {
         
         const previewBtn = `<button onclick="window.previewItem('${item.id}')" class="absolute top-2.5 right-2.5 w-7 h-7 bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md transition z-20" title="Coba (Preview)">👁️</button>`;
 
-        // LOGIKA TOMBOL AKSI DI DALAM CARD (Mergabungkan fungsionalitas Equip/Unequip)
+        // LOGIKA TOMBOL AKSI DI DALAM CARD
         let actionHTML = '';
         if (isOwned) {
             if (isEquipped) {
@@ -367,7 +373,7 @@ window.previewItem = function(itemId) {
         `;
     }
 
-    // TOMBOL AKSI MODAL PREVIEW (Mergabungkan fungsionalitas Equip/Unequip/Beli)
+    // TOMBOL AKSI MODAL PREVIEW 
     const isConsumable = item.type === 'item';
     const isOwned = !isConsumable && window.unlockedItems.includes(item.id);
     const isEquipped = isOwned && window.equippedItems[item.type] === item.id;
@@ -382,7 +388,6 @@ window.previewItem = function(itemId) {
     } else if (item.gachaOnly) {
         actionBtn.innerHTML = `<button onclick="window.closeShopPreview()" class="w-full bg-gray-800 border border-yellow-500/50 text-yellow-500 font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(234,179,8,0.2)] text-sm hover:bg-gray-700">🔒 Dapatkan dari Gacha</button>`;
     } else {
-        // Gabungan Beli Consumable & Beli Kosmetik Biasa
         const btnText = isConsumable 
             ? `Beli 🪙 ${item.price.toLocaleString('id-ID')} ${qty > 0 ? `<span class="text-xs font-medium ml-1">(Punya: ${qty})</span>` : ''}` 
             : `Beli 🪙 ${item.price.toLocaleString('id-ID')}`;
@@ -499,12 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const isClosed = contentShop.classList.contains('hidden');
             if (isClosed) {
                 contentShop.classList.remove('hidden');
-                teaserShop.classList.add('hidden');
+                // teaserShop.classList.add('hidden'); // <-- Di-comment agar tidak hilang
                 if(iconToggleShop) iconToggleShop.style.transform = 'rotate(180deg)';
                 if(textToggleShop) textToggleShop.innerText = 'Tutup Katalog';
             } else {
                 contentShop.classList.add('hidden');
-                teaserShop.classList.remove('hidden');
+                // teaserShop.classList.remove('hidden'); // <-- Di-comment agar tidak bentrok
                 if(iconToggleShop) iconToggleShop.style.transform = 'rotate(0deg)';
                 if(textToggleShop) textToggleShop.innerText = 'Buka Katalog Lengkap';
             }
