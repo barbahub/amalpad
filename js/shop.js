@@ -1,14 +1,37 @@
-// --- INSIALISASI DATA TOKO ---
-// Mengambil data Koin dari localStorage (Pastikan tersinkronisasi dengan Firebase milikmu di app aslinya)
-window.totalKoin = parseInt(localStorage.getItem('totalKoin') || 10000); 
+// ============================================================
+// --- INISIALISASI STATE & DATA (ANTI-CRASH) ---
+// ============================================================
 
-// Update tampilan koin di UI Toko
-const shopKoinDisplay = document.getElementById('shop-koin-display');
-if(shopKoinDisplay) {
-    shopKoinDisplay.innerText = window.totalKoin.toLocaleString('id-ID');
-}
+// Mengambil data dengan fallback aman untuk mencegah error JSON.parse(null)
+const getSafeJSON = (key, fallback) => {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : fallback;
+    } catch (e) {
+        console.error(`Error parsing ${key} from localStorage`, e);
+        return fallback;
+    }
+};
 
-// --- DATA KATALOG TOKO ---
+window.totalKoin = parseInt(localStorage.getItem('totalKoin')) || 10000; 
+window.unlockedItems = getSafeJSON('unlockedItems', ["tasbih_kayu"]);
+window.inventory = getSafeJSON('inventory', {});
+window.equippedItems = getSafeJSON('equippedItems', { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null });
+window.currentShopFilter = 'all';
+
+// Sinkronisasi UI Koin Awal
+const updateKoinUI = () => {
+    const mainKoinDisplay = document.getElementById('koin-display');
+    const shopKoinDisplay = document.getElementById('shop-koin-display');
+    if(mainKoinDisplay) mainKoinDisplay.innerText = window.totalKoin; 
+    if(shopKoinDisplay) shopKoinDisplay.innerText = window.totalKoin.toLocaleString('id-ID');
+};
+updateKoinUI();
+
+// ============================================================
+// --- DATA KATALOG TOKO & STYLES ---
+// ============================================================
+
 window.shopCatalog = [
     { id: "tasbih_kayu", name: "Kayu Kokka", price: 10000, icon: "🪵", type: "tasbih_skin", desc: "Desain klasik kayu kokka yang menenangkan hati." },
     { id: "tasbih_kristal", name: "Kristal Makkah", price: 18000, icon: "💎", type: "tasbih_skin", desc: "Tombol tasbih mewah berkilau layaknya permata." },
@@ -20,19 +43,18 @@ window.shopCatalog = [
     { id: "aura_koin", name: "Aura Koin", price: 8000, icon: "🪙", type: "aura", desc: "Memancarkan aura koin emas di belakang avatarmu." },
     { id: "aura_sakura", name: "Aura Sakura", price: 10000, icon: "🌸", type: "aura", desc: "Efek daun sakura merah muda di sekeliling profil." },
     
-    // ITEM GACHA EXCLUSIVE (TIDAK BISA DIBELI PAKAI KOIN)
+    // ITEM GACHA EXCLUSIVE
     { id: "aura_vip", name: "Aura VIP (SR)", price: 0, icon: "✨", type: "aura", desc: "Aura mistis VIP eksklusif! Hanya dari Gacha Premium.", gachaOnly: true },
     { id: "aura_sss", name: "Aura Sultan (SSS)", price: 0, icon: "👑", type: "aura", desc: "Aura Solo & Circle Permanen! Hanya dari Gacha Premium.", gachaOnly: true },
     
     // ITEM CONSUMABLES
-    { id: "tiket_emas", name: "Tiket Emas Gacha", price: 1000, icon: "🎫", type: "item", desc: "Tiket premium untuk memutar Gacha Kebaikan. Peluang dapat Tier SSS!" }, // DIUBAH MENJADI 1000 KOIN
+    { id: "tiket_emas", name: "Tiket Emas Gacha", price: 5000, icon: "🎫", type: "item", desc: "Tiket premium untuk memutar Gacha Kebaikan. Peluang dapat Tier SSS!" },
     { id: "item_buff", name: "Ramuan 2x EXP", price: 5000, icon: "🧪", type: "item", desc: "Menggandakan perolehan EXP selama 24 jam!" },
     { id: "item_guild", name: "Tiket Pendiri", price: 15000, icon: "📜", type: "item", desc: "Syarat wajib mendirikan Circle/Guild baru." },
     { id: "item_freeze", name: "Pelindung Streak", price: 8000, icon: "❄️", type: "item", desc: "Menyelamatkan api streak harianmu jika terlewat 1 hari." },
     { id: "item_circle_plus", name: "Ekspansi Circle", price: 25000, icon: "🏕️", type: "item", desc: "Menambah batas maksimal anggota Circle-mu (+5 Slot)." }
 ];
 
-// --- GAYA RENDER PREVIEW (CSS Styles) ---
 window.previewStyles = {
     name_api: 'text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,1)]',
     name_neon: 'text-fuchsia-400 drop-shadow-[0_0_15px_rgba(217,70,239,1)]',
@@ -41,18 +63,87 @@ window.previewStyles = {
     aura_sakura: 'bg-pink-500/30 shadow-[0_0_50px_rgba(244,114,182,0.8)] scale-110'
 };
 
-// Mengambil data inventori dan barang terbuka
-window.unlockedItems = JSON.parse(localStorage.getItem('unlockedItems')) || ["tasbih_kayu"];
-window.inventory = JSON.parse(localStorage.getItem('inventory')) || {};
-window.currentShopFilter = 'all';
+// ============================================================
+// --- FUNGSI AKSI (BELI & EQUIP) ---
+// ============================================================
 
-// --- RENDER TEASER ITEM (SPESIAL MINGGU INI) ---
+window.toggleEquipItem = function(id, type) {
+    if (window.equippedItems[type] === id) {
+        window.equippedItems[type] = null; // Lepas jika sedang dipakai
+    } else {
+        window.equippedItems[type] = id; // Pakai / Replace yang lama
+    }
+    
+    localStorage.setItem('equippedItems', JSON.stringify(window.equippedItems));
+    
+    // Refresh UI secara instan
+    window.renderShop();
+    window.renderFeaturedItems();
+    if(typeof window.updatePlayerUI === 'function') window.updatePlayerUI();
+};
+
+window.buyItem = function(id, price) {
+    const itemDef = window.shopCatalog.find(i => i.id === id);
+    if (!itemDef) return;
+
+    let qtyToBuy = 1;
+    
+    // Fitur Pembelian Multi (Hanya untuk tipe 'item' / consumable)
+    if (itemDef.type === 'item') {
+        let input = prompt(`Berapa banyak [${itemDef.name}] yang mau dibeli?\nHarga: 🪙 ${price.toLocaleString('id-ID')} / item.`, "1");
+        if (input === null) return; // Batal
+        qtyToBuy = parseInt(input);
+        if (isNaN(qtyToBuy) || qtyToBuy <= 0) {
+            alert("Jumlah tidak valid! Masukkan angka yang benar.");
+            return;
+        }
+    }
+    
+    let totalPrice = price * qtyToBuy;
+
+    if (window.totalKoin < totalPrice) { 
+        alert(`Koin kamu kurang bos!\nButuh 🪙 ${totalPrice.toLocaleString('id-ID')} untuk membeli ${qtyToBuy}x ${itemDef.name}.`); 
+        return; 
+    }
+    
+    if (!confirm(`Yakin ingin menukarkan 🪙 ${totalPrice.toLocaleString('id-ID')} koin untuk membeli ${qtyToBuy}x ${itemDef.name}?`)) return;
+    
+    // Proses Transaksi
+    window.totalKoin -= totalPrice; 
+    localStorage.setItem('totalKoin', window.totalKoin);
+    
+    if (itemDef.type === 'item') {
+        window.inventory[id] = (window.inventory[id] || 0) + qtyToBuy;
+        localStorage.setItem('inventory', JSON.stringify(window.inventory));
+    } else {
+        window.unlockedItems.push(id);
+        localStorage.setItem('unlockedItems', JSON.stringify(window.unlockedItems));
+        
+        // Auto-equip saat pertama kali beli Cosmetic
+        window.equippedItems[itemDef.type] = id;
+        localStorage.setItem('equippedItems', JSON.stringify(window.equippedItems));
+        if(typeof window.updatePlayerUI === 'function') window.updatePlayerUI();
+    }
+    
+    // Refresh UI
+    updateKoinUI();
+    window.renderShop();
+    window.renderFeaturedItems();
+    
+    if(typeof confetti === 'function') {
+        confetti({ particleCount: 150, spread: 80, zIndex: 9999, origin: { y: 0.6 } });
+    }
+};
+
+// ============================================================
+// --- FUNGSI RENDER UI ---
+// ============================================================
+
 window.renderFeaturedItems = function() {
     const container = document.getElementById('featured-items-container');
     if(!container) return;
     container.innerHTML = '';
     
-    // Kita pamerkan Aura SSS dan Tiket Emas sebagai bait!
     const featuredIds = ['aura_sss', 'tiket_emas'];
     
     featuredIds.forEach(id => {
@@ -66,7 +157,6 @@ window.renderFeaturedItems = function() {
         card.className = "bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 p-2.5 rounded-2xl border border-gray-200 dark:border-gray-600 flex items-center gap-3 cursor-pointer hover:shadow-md transition group";
         card.onclick = () => window.previewItem(item.id);
         
-        // Logika Label (Dimiliki, Gacha Only, atau Beli Koin)
         let priceLabel = `<span class="text-[10px] font-black text-amber-500 dark:text-amber-400 flex items-center gap-1">🪙 ${item.price.toLocaleString('id-ID')}</span>`;
         if (isOwned && item.type !== 'item') {
             priceLabel = `<span class="text-[9px] font-bold text-emerald-500 dark:text-emerald-400 flex items-center gap-1">✓ Dimiliki</span>`;
@@ -92,7 +182,6 @@ window.renderFeaturedItems = function() {
     });
 };
 
-// --- RENDER UI TOKO KESELURUHAN ---
 window.renderShop = function() {
     const container = document.getElementById('shop-container');
     if(!container) return; 
@@ -103,6 +192,7 @@ window.renderShop = function() {
     filteredItems.forEach(item => {
         const isConsumable = item.type === 'item';
         const isOwned = !isConsumable && window.unlockedItems.includes(item.id);
+        const isEquipped = isOwned && window.equippedItems[item.type] === item.id;
         const qty = window.inventory[item.id] || 0;
         
         const typeColors = {
@@ -113,27 +203,34 @@ window.renderShop = function() {
         };
         
         let badgeColor = typeColors[item.type] || 'text-gray-500 bg-gray-100 border-gray-200';
-        if(item.gachaOnly) badgeColor = 'text-yellow-600 bg-yellow-100 border-yellow-300 dark:text-yellow-300 dark:bg-yellow-900/40 dark:border-yellow-700'; // Special Badge
+        if(item.gachaOnly) badgeColor = 'text-yellow-600 bg-yellow-100 border-yellow-300 dark:text-yellow-300 dark:bg-yellow-900/40 dark:border-yellow-700';
         
+        const cardClass = isOwned 
+            ? 'border-emerald-400 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
+            : 'border-gray-100 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-md hover:border-emerald-300 dark:hover:border-emerald-600';
+            
         const card = document.createElement('div');
-        card.className = `relative p-3.5 rounded-[1.5rem] border-2 flex flex-col items-center text-center transition-all duration-300 transform hover:-translate-y-1.5 hover:shadow-xl group overflow-hidden ${isOwned ? 'border-emerald-400 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-gray-100 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-md hover:border-emerald-300 dark:hover:border-emerald-600'}`;
+        card.className = `relative p-3.5 rounded-[1.5rem] border-2 flex flex-col items-center text-center transition-all duration-300 transform hover:-translate-y-1.5 hover:shadow-xl group overflow-hidden ${cardClass}`;
         
         const previewBtn = `<button onclick="window.previewItem('${item.id}')" class="absolute top-2.5 right-2.5 w-7 h-7 bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md transition z-20" title="Coba (Preview)">👁️</button>`;
 
-        // LOGIKA TOMBOL AKSI DI DALAM CARD
+        // LOGIKA TOMBOL AKSI DI DALAM CARD (Mergabungkan fungsionalitas Equip/Unequip)
         let actionHTML = '';
         if (isOwned) {
-            actionHTML = `<div class="w-full text-emerald-600 dark:text-emerald-400 py-1.5 rounded-xl text-[10px] font-black flex items-center justify-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/50"><span>✓</span> Dimiliki / Aktif</div>`;
+            if (isEquipped) {
+                actionHTML = `<button onclick="window.toggleEquipItem('${item.id}', '${item.type}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-1.5 rounded-xl text-[10px] font-black active:scale-95 transition shadow-md flex items-center justify-center gap-1.5">✓ Dipakai</button>`;
+            } else {
+                actionHTML = `<button onclick="window.toggleEquipItem('${item.id}', '${item.type}')" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 py-1.5 rounded-xl text-[10px] font-black active:scale-95 transition flex items-center justify-center gap-1.5">Pakai</button>`;
+            }
         } else if (item.gachaOnly) {
-            // Jika item ini Gacha Exclusive
-            actionHTML = `<button onclick="alert('Item ini sangat langka! Dapatkan lewat Gacha Kebaikan dengan menukarkan Tiket Emas.')" class="w-full bg-gray-800 border border-yellow-500/50 text-yellow-500 hover:bg-gray-700 py-1.5 rounded-xl text-[10px] font-black active:scale-95 transition shadow-md flex items-center justify-center gap-1">🔒 Eksklusif Gacha</button>`;
+            actionHTML = `<button onclick="alert('Item ini sangat langka! Dapatkan lewat Gacha Kebaikan dengan menukarkan Tiket Emas.')" class="w-full bg-gray-800 border border-yellow-500/50 text-yellow-500 hover:bg-gray-700 py-1.5 rounded-xl text-[10px] font-black active:scale-95 transition shadow-md flex items-center justify-center gap-1">🔒 Gacha Only</button>`;
         } else if (isConsumable) {
             actionHTML = `<button onclick="window.buyItem('${item.id}', ${item.price})" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white py-1.5 rounded-xl text-[10px] font-black active:scale-95 transition shadow-md shadow-emerald-500/30 flex items-center justify-center gap-1">Beli 🪙 ${item.price.toLocaleString('id-ID')} ${qty > 0 ? `(${qty})` : ''}</button>`;
         } else {
             actionHTML = `<button onclick="window.buyItem('${item.id}', ${item.price})" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition shadow-md shadow-emerald-500/30 flex items-center justify-center gap-1.5">🪙 ${item.price.toLocaleString('id-ID')}</button>`;
         }
 
-        let badgeText = item.gachaOnly ? 'TIER SSS/SR' : item.type;
+        let badgeText = item.gachaOnly ? 'TIER SSS/SR' : item.type.replace('_', ' ');
 
         card.innerHTML = `
             <div class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border ${badgeColor} backdrop-blur-sm z-10">${badgeText}</div>
@@ -158,7 +255,6 @@ window.renderShop = function() {
     }
 };
 
-// --- SISTEM PREVIEW ---
 window.previewItem = function(itemId) {
     const item = window.shopCatalog.find(i => i.id === itemId);
     if(!item) return;
@@ -169,27 +265,27 @@ window.previewItem = function(itemId) {
     const desc = document.getElementById('preview-desc');
     const actionBtn = document.getElementById('preview-action');
     
+    if(!modal || !canvas) return; // Keamanan anti-crash
+    
     title.innerText = item.name;
     desc.innerText = item.desc;
     canvas.className = 'w-full h-48 rounded-2xl flex flex-col items-center justify-center relative mb-5 shadow-inner border border-white/10 overflow-hidden bg-gray-800 transition-all duration-500';
 
     // RENDER CANVAS BERDASARKAN TIPE
     if (item.type === 'tasbih_skin') {
-        let skinClass = "";
-        let textColor = "";
+        let skinClass = "bg-gray-700 border-gray-800 border-[6px]";
+        let textColor = "text-white";
+        
         if(item.id === 'tasbih_kayu') {
             skinClass = "bg-amber-800 border-amber-900 shadow-[inset_0_-8px_15px_rgba(0,0,0,0.5)] border-[8px]";
             textColor = "text-amber-100";
-        }
-        if(item.id === 'tasbih_kristal') {
+        } else if(item.id === 'tasbih_kristal') {
             skinClass = "bg-gradient-to-br from-cyan-200 to-blue-400 border-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.6),inset_0_-8px_20px_rgba(255,255,255,0.8)] border-[6px]";
             textColor = "text-white drop-shadow-md";
-        }
-        if(item.id === 'tasbih_cyber') {
+        } else if(item.id === 'tasbih_cyber') {
             skinClass = "bg-gray-900 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5),inset_0_0_10px_rgba(16,185,129,0.5)] border-[4px]";
             textColor = "text-emerald-400 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]";
-        }
-        if(item.id === 'tasbih_sss') {
+        } else if(item.id === 'tasbih_sss') {
             skinClass = "bg-gradient-to-br from-yellow-600 via-amber-500 to-red-600 border-yellow-300 shadow-[0_0_25px_rgba(250,204,21,0.8),inset_0_-8px_15px_rgba(0,0,0,0.6)] border-[6px] animate-pulse";
             textColor = "text-yellow-100 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]";
         }
@@ -216,7 +312,6 @@ window.previewItem = function(itemId) {
         `;
     }
     else if (item.type === 'aura') {
-        // Logika Untuk Animasi CSS Aura Gacha yang Baru
         if (item.id === 'aura_sss' || item.id === 'aura_vip') {
              let auraClass = item.id === 'aura_sss' ? 'avatar-aura-sss' : 'avatar-aura-vip';
              let textClass = item.id === 'aura_sss' ? 'name-aura-sss' : 'name-aura-vip';
@@ -229,7 +324,6 @@ window.previewItem = function(itemId) {
                  </div>
              `;
         } else {
-            // Aura Standar Koin / Sakura
             const fxStyle = window.previewStyles[item.id] || '';
             canvas.innerHTML = `
                 <div class="absolute inset-0 bg-gray-900 opacity-80 z-0"></div>
@@ -252,19 +346,27 @@ window.previewItem = function(itemId) {
         `;
     }
 
-    // TOMBOL AKSI MODAL PREVIEW (Beli / Dimiliki / Gacha)
+    // TOMBOL AKSI MODAL PREVIEW (Mergabungkan fungsionalitas Equip/Unequip/Beli)
     const isConsumable = item.type === 'item';
     const isOwned = !isConsumable && window.unlockedItems.includes(item.id);
+    const isEquipped = isOwned && window.equippedItems[item.type] === item.id;
     const qty = window.inventory[item.id] || 0;
 
     if(isOwned) {
-        actionBtn.innerHTML = `<button onclick="window.closeShopPreview()" class="w-full bg-gray-800 border border-gray-600 text-emerald-400 font-bold py-3 rounded-xl transition shadow-inner">Sudah Dimiliki / Terpasang</button>`;
+        if (isEquipped) {
+            actionBtn.innerHTML = `<button onclick="window.toggleEquipItem('${item.id}', '${item.type}'); window.closeShopPreview()" class="w-full bg-gray-800 border border-emerald-500 text-emerald-400 font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:bg-gray-700">Lepas Item Ini</button>`;
+        } else {
+            actionBtn.innerHTML = `<button onclick="window.toggleEquipItem('${item.id}', '${item.type}'); window.closeShopPreview()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.3)]">Pakai Item Ini</button>`;
+        }
     } else if (item.gachaOnly) {
-        actionBtn.innerHTML = `<button onclick="window.closeShopPreview()" class="w-full bg-gray-800 border border-yellow-500/50 text-yellow-500 font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(234,179,8,0.2)] text-sm">🔒 Dapatkan dari Gacha</button>`;
-    } else if (isConsumable) {
-        actionBtn.innerHTML = `<button onclick="window.buyItem('${item.id}', ${item.price}); window.closeShopPreview()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(16,185,129,0.4)] text-lg">Beli 🪙 ${item.price.toLocaleString('id-ID')} ${qty > 0 ? `<span class="text-xs font-medium ml-1">(Punya: ${qty})</span>` : ''}</button>`;
+        actionBtn.innerHTML = `<button onclick="window.closeShopPreview()" class="w-full bg-gray-800 border border-yellow-500/50 text-yellow-500 font-bold py-3 rounded-xl transition shadow-[0_0_20px_rgba(234,179,8,0.2)] text-sm hover:bg-gray-700">🔒 Dapatkan dari Gacha</button>`;
     } else {
-        actionBtn.innerHTML = `<button onclick="window.buyItem('${item.id}', ${item.price}); window.closeShopPreview()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(16,185,129,0.4)] text-lg">Beli 🪙 ${item.price.toLocaleString('id-ID')}</button>`;
+        // Gabungan Beli Consumable & Beli Kosmetik Biasa
+        const btnText = isConsumable 
+            ? `Beli 🪙 ${item.price.toLocaleString('id-ID')} ${qty > 0 ? `<span class="text-xs font-medium ml-1">(Punya: ${qty})</span>` : ''}` 
+            : `Beli 🪙 ${item.price.toLocaleString('id-ID')}`;
+            
+        actionBtn.innerHTML = `<button onclick="window.buyItem('${item.id}', ${item.price}); window.closeShopPreview()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black py-3 rounded-xl transition shadow-[0_0_20px_rgba(16,185,129,0.4)] text-lg">${btnText}</button>`;
     }
 
     modal.classList.remove('hidden');
@@ -273,105 +375,25 @@ window.previewItem = function(itemId) {
 
 window.closeShopPreview = function() {
     const modal = document.getElementById('shop-preview-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-};
-
-// --- SISTEM PEMBELIAN TOKO ---
-window.buyItem = function(id, price) {
-    if (window.totalKoin < price) { 
-        alert("Koin kamu kurang bos! Selesaikan misi ibadah dulu ya."); 
-        return; 
-    }
-    
-    if (!confirm(`Yakin ingin menukarkan ${price.toLocaleString('id-ID')} koin untuk membeli item ini?`)) return;
-    
-    window.totalKoin -= price; 
-    
-    const itemDef = window.shopCatalog.find(i => i.id === id);
-    if (itemDef && itemDef.type === 'item') {
-        window.inventory[id] = (window.inventory[id] || 0) + 1;
-        localStorage.setItem('inventory', JSON.stringify(window.inventory));
-    } else {
-        window.unlockedItems.push(id);
-        localStorage.setItem('unlockedItems', JSON.stringify(window.unlockedItems));
-    }
-    
-    localStorage.setItem('totalKoin', window.totalKoin); 
-    
-    // Update UI Koin di header utama dan toko
-    const mainKoinDisplay = document.getElementById('koin-display');
-    const shopKoinDisplay = document.getElementById('shop-koin-display');
-    if(mainKoinDisplay) mainKoinDisplay.innerText = window.totalKoin; 
-    if(shopKoinDisplay) shopKoinDisplay.innerText = window.totalKoin.toLocaleString('id-ID'); 
-    
-    window.renderShop();
-    window.renderFeaturedItems();
-    
-    if(typeof confetti === 'function') {
-        confetti({ particleCount: 150, spread: 80, zIndex: 9999, origin: { y: 0.6 } });
+    if(modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
     }
 };
-
-// --- EVENT LISTENERS UI TOKO ---
-// 1. Accordion Toggle
-const btnToggleShop = document.getElementById('btn-toggle-shop');
-const contentShop = document.getElementById('shop-content-wrapper');
-const teaserShop = document.getElementById('shop-teaser');
-const iconToggleShop = document.getElementById('icon-toggle-shop');
-const textToggleShop = document.getElementById('text-toggle-shop');
-
-if (btnToggleShop && contentShop && teaserShop) {
-    btnToggleShop.addEventListener('click', () => {
-        const isClosed = contentShop.classList.contains('hidden');
-        if (isClosed) {
-            contentShop.classList.remove('hidden');
-            teaserShop.classList.add('hidden');
-            if(iconToggleShop) iconToggleShop.style.transform = 'rotate(180deg)';
-            if(textToggleShop) textToggleShop.innerText = 'Tutup Katalog';
-        } else {
-            contentShop.classList.add('hidden');
-            teaserShop.classList.remove('hidden');
-            if(iconToggleShop) iconToggleShop.style.transform = 'rotate(0deg)';
-            if(textToggleShop) textToggleShop.innerText = 'Buka Katalog Lengkap';
-        }
-    });
-}
-
-// 2. Tab Filter Kategori
-document.querySelectorAll('.shop-tab').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.shop-tab').forEach(b => {
-            b.classList.remove('bg-emerald-500', 'text-white', 'shadow-sm');
-            b.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
-        });
-        e.target.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
-        e.target.classList.add('bg-emerald-500', 'text-white', 'shadow-sm');
-        
-        window.currentShopFilter = e.target.getAttribute('data-type');
-        window.renderShop();
-    });
-});
-
-// Inisialisasi awal saat script dimuat
-window.renderShop();
-window.renderFeaturedItems();
 
 // ============================================================
 // --- SISTEM GACHA PREMIUM (RNG DROP RATE) ---
 // ============================================================
 
 window.gachaPool = [
-    { id: 'aura_sss', name: 'Aura Sultan SSS', type: 'cosmetic', tier: 'sss', probability: 0.01 }, // Peluang 1%
-    { id: 'tasbih_sss', name: 'Tasbih Naga Emas (SSS)', type: 'cosmetic', tier: 'sss', probability: 0.02 }, // Peluang 2%
-    { id: 'aura_vip', name: 'Aura VIP SR', type: 'cosmetic', tier: 'sr', probability: 0.08 },     // Peluang 8%
-    { id: 'rare_coins', name: 'Jackpot 1.000 Koin', type: 'currency', tier: 'rare', probability: 0.30, value: 1000 }, // Peluang 30%
-    { id: 'item_buff', name: 'Ramuan 2x EXP', type: 'consumable', tier: 'common', probability: 0.59 } // Peluang 59%
+    { id: 'aura_sss', name: 'Aura Sultan SSS', type: 'cosmetic', tier: 'sss', probability: 0.01 }, 
+    { id: 'tasbih_sss', name: 'Tasbih Naga Emas (SSS)', type: 'cosmetic', tier: 'sss', probability: 0.02 }, 
+    { id: 'aura_vip', name: 'Aura VIP SR', type: 'cosmetic', tier: 'sr', probability: 0.08 },      
+    { id: 'rare_coins', name: 'Jackpot 1.000 Koin', type: 'currency', tier: 'rare', probability: 0.30, value: 1000 }, 
+    { id: 'item_buff', name: 'Ramuan 2x EXP', type: 'consumable', tier: 'common', probability: 0.59 } 
 ];
 
-// Fungsi ini bisa dipanggil saat kotak Gacha di menu Quest diklik
 window.rollGachaPremium = function() {
-    // 1. Cek apakah player punya Tiket Emas di tasnya
     let tiketCount = window.inventory['tiket_emas'] || 0;
     
     if (tiketCount < 1) {
@@ -379,18 +401,14 @@ window.rollGachaPremium = function() {
         return;
     }
     
-    // 2. Konfirmasi Gacha
     if (!confirm("Gunakan 1 Tiket Emas untuk memutar Gacha Premium?")) return;
     
-    // 3. Kurangi Tiket Emas
     window.inventory['tiket_emas'] -= 1;
     localStorage.setItem('inventory', JSON.stringify(window.inventory));
-    window.renderShop(); // Refresh UI tasbih/toko
 
-    // 4. RNG - Mesin Pengundi Acak (Math.random)
     const rand = Math.random();
     let cumulative = 0;
-    let wonItem = window.gachaPool[window.gachaPool.length - 1]; // Default fallback
+    let wonItem = window.gachaPool[window.gachaPool.length - 1]; 
 
     for (const item of window.gachaPool) {
         cumulative += item.probability;
@@ -400,7 +418,6 @@ window.rollGachaPremium = function() {
         }
     }
     
-    // 5. Proses Hadiah Berdasarkan Tipe
     let msg = `🎉 GACHA BERHASIL! 🎉\n\nKamu mendapatkan [TIER ${wonItem.tier.toUpperCase()}] - ${wonItem.name}!\n\n`;
 
     if (wonItem.type === 'currency') {
@@ -409,7 +426,6 @@ window.rollGachaPremium = function() {
         msg += `Selamat! Saldo Koin kamu langsung bertambah +${wonItem.value}.`;
         
     } else if (wonItem.type === 'cosmetic') {
-        // Sistem Penanganan Item Duplicate (Ganda)
         if (window.unlockedItems.includes(wonItem.id)) {
             window.totalKoin += 500;
             localStorage.setItem('totalKoin', window.totalKoin);
@@ -426,16 +442,12 @@ window.rollGachaPremium = function() {
         msg += `Item Consumable telah disimpan dengan aman di dalam tasmu!`;
     }
     
-    // 6. Update Seluruh UI (Koin Header & Koin Toko)
-    const mainKoinDisplay = document.getElementById('koin-display');
-    const shopKoinDisplay = document.getElementById('shop-koin-display');
-    if(mainKoinDisplay) mainKoinDisplay.innerText = window.totalKoin; 
-    if(shopKoinDisplay) shopKoinDisplay.innerText = window.totalKoin.toLocaleString('id-ID'); 
-    
+    // Refresh Seluruh UI
+    updateKoinUI();
     window.renderShop();
     window.renderFeaturedItems();
 
-    // 7. Ledakan Confetti Berdasarkan Tier
+    // Ledakan Confetti
     if(typeof confetti === 'function') {
         if (wonItem.tier === 'sss') {
             confetti({ particleCount: 200, spread: 100, colors: ['#FFD700', '#FFA500', '#FFFFFF'], zIndex: 9999, origin: { y: 0.6 } });
@@ -446,6 +458,54 @@ window.rollGachaPremium = function() {
         }
     }
 
-    // Tampilkan notifikasi modal kecil setelah animasi jalan
     setTimeout(() => alert(msg), 300);
 };
+
+// ============================================================
+// --- EVENT LISTENERS UI TOKO ---
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Accordion Toggle
+    const btnToggleShop = document.getElementById('btn-toggle-shop');
+    const contentShop = document.getElementById('shop-content-wrapper');
+    const teaserShop = document.getElementById('shop-teaser');
+    const iconToggleShop = document.getElementById('icon-toggle-shop');
+    const textToggleShop = document.getElementById('text-toggle-shop');
+
+    if (btnToggleShop && contentShop && teaserShop) {
+        btnToggleShop.addEventListener('click', () => {
+            const isClosed = contentShop.classList.contains('hidden');
+            if (isClosed) {
+                contentShop.classList.remove('hidden');
+                teaserShop.classList.add('hidden');
+                if(iconToggleShop) iconToggleShop.style.transform = 'rotate(180deg)';
+                if(textToggleShop) textToggleShop.innerText = 'Tutup Katalog';
+            } else {
+                contentShop.classList.add('hidden');
+                teaserShop.classList.remove('hidden');
+                if(iconToggleShop) iconToggleShop.style.transform = 'rotate(0deg)';
+                if(textToggleShop) textToggleShop.innerText = 'Buka Katalog Lengkap';
+            }
+        });
+    }
+
+    // 2. Tab Filter Kategori
+    document.querySelectorAll('.shop-tab').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.shop-tab').forEach(b => {
+                b.classList.remove('bg-emerald-500', 'text-white', 'shadow-sm');
+                b.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+            });
+            e.target.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+            e.target.classList.add('bg-emerald-500', 'text-white', 'shadow-sm');
+            
+            window.currentShopFilter = e.target.getAttribute('data-type');
+            window.renderShop();
+        });
+    });
+
+    // Inisialisasi awal saat script dimuat
+    window.renderShop();
+    window.renderFeaturedItems();
+});
