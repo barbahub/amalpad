@@ -2,6 +2,7 @@
 // Fungsi: Mengatur Radar Skena, Heatmap, dan Rak Trofi (Badges)
 
 import { playerState } from './state.js';
+import { calculateLevelInfo } from './player.js'; // 👈 IMPORT DITAMBAHKAN UNTUK MEMBACA LEVEL DINAMIS!
 
 // --- AUTO-MIGRASI DATA STATS LAMA KE BARU ---
 // Fungsi ini memastikan kalau ada data format lama, tidak bikin error
@@ -27,17 +28,21 @@ export function updateBadges() {
     if (!badgeContainer) return;
 
     let badgesHTML = '';
-    const level = playerState.level || 1;
+    
+    // AMBIL LEVEL DARI KALKULASI EXP, BUKAN DARI STATE!
+    const levelInfo = calculateLevelInfo(playerState.exp);
+    const currentLevel = levelInfo.level || 1;
+    
     const streak = parseInt(localStorage.getItem('streakNum')) || 0;
     const totalKoin = playerState.koin || 0;
     const radar = playerState.statsRadar || { pusat:0, aura:0, derma:0, stoic:0, peka:0, sigma:0 };
 
     // Kriteria Badges (Bisa Anda tambah sesuka hati nanti)
     const badges = [
-        { id: 'b1', icon: '🌱', name: 'Newbie', desc: 'Mencapai Level 5', unlocked: level >= 5 },
+        { id: 'b1', icon: '🌱', name: 'Newbie', desc: 'Mencapai Level 5', unlocked: currentLevel >= 5 },
         { id: 'b2', icon: '🔥', name: 'Istiqomah', desc: 'Streak 7 Hari', unlocked: streak >= 7 },
         { id: 'b3', icon: '💎', name: 'Sultan', desc: 'Kumpulkan 1.000 Koin', unlocked: totalKoin >= 1000 },
-        { id: 'b4', icon: '👑', name: 'Sepuh', desc: 'Mencapai Level 30', unlocked: level >= 30 },
+        { id: 'b4', icon: '👑', name: 'Sepuh', desc: 'Mencapai Level 30', unlocked: currentLevel >= 30 },
         { id: 'b5', icon: '⚡', name: 'Backingan Pusat', desc: 'Stat Sholat > 50', unlocked: radar.pusat >= 50 },
         { id: 'b6', icon: '💰', name: 'Crazy Rich', desc: 'Stat Sedekah > 50', unlocked: radar.derma >= 50 }
     ];
@@ -146,11 +151,12 @@ export function renderCharts() {
     const percentText = document.getElementById('donut-percent');
     if(percentText) percentText.innerText = `${percentVal}%`;
 
-    // UPDATE AURA BADGE (Berdasarkan data tertinggi dari Radar)
+    // UPDATE AURA BADGE (Berdasarkan data tertinggi dari Radar dan Kalkulasi Level)
+    const levelInfo = calculateLevelInfo(playerState.exp);
     const maxStatName = labels[ dataPts.indexOf(Math.max(...dataPts)) ];
     const auraBadgeContainer = document.getElementById('aura-badge-container');
     if(auraBadgeContainer) {
-        auraBadgeContainer.innerHTML = window.getAuraBadgeUI(playerState.level, maxStatName);
+        auraBadgeContainer.innerHTML = window.getAuraBadgeUI(levelInfo.level || 1, maxStatName);
     }
 }
 
@@ -175,7 +181,7 @@ window.updateHeatmap = function() {
         else if (count <= 6) { colorClass = 'bg-emerald-400 dark:bg-emerald-700'; tooltip = "Skena Ibadah"; }
         else if (count <= 10) { colorClass = 'bg-emerald-600 dark:bg-emerald-500'; tooltip = "Rajin Parah"; }
         else { colorClass = 'bg-cyan-400 shadow-sm shadow-cyan-400/50 animate-pulse'; tooltip = "Backingan Pusat"; }
-      
+       
         const dayName = new Date(dateStr).toLocaleDateString('id-ID', {weekday: 'short'}).charAt(0);
         container.innerHTML += `<div onclick="alert('Kasta Hari Ini: ${tooltip}')" class="flex flex-col items-center gap-1 cursor-pointer hover:scale-110 transition"><div class="w-8 h-8 rounded-lg ${colorClass} transition-colors duration-500" title="${tooltip}"></div><span class="text-[9px] font-bold text-gray-400">${dayName}</span></div>`;
     });
