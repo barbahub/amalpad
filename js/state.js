@@ -19,7 +19,11 @@ export const playerState = {
     level: 1,
     unlockedItems: getSafeJSON('unlockedItems', ["tasbih_kayu"]),
     inventory: getSafeJSON('inventory', {}),
-    equippedItems: getSafeJSON('equippedItems', { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null })
+    equippedItems: getSafeJSON('equippedItems', { tasbih_skin: 'tasbih_kayu', name_fx: null, aura: null }),
+    
+    // --- TAMBAHAN: Data Radar & VIP Misi ---
+    vipBuff: localStorage.getItem('vip_buff_active') === 'true',
+    statsRadar: getSafeJSON('statsRadar', { pusat: 10, aura: 10, peka: 10, sigma: 10, derma: 10, stoic: 10 })
 };
 
 // Fungsi Utama untuk merubah data (Action)
@@ -34,4 +38,14 @@ export function addKoin(amount) {
     playerState.koin += amount;
     localStorage.setItem('totalKoin', playerState.koin);
     document.dispatchEvent(new CustomEvent('stateUpdated', { detail: playerState }));
+}
+
+// Fungsi baru untuk Misi (Nambah Poin Radar Aura)
+export function addRadarStat(type, amount) {
+    if(playerState.statsRadar[type] !== undefined) {
+        // Math.min memastikan nilai radar mentok di 100 (tidak over-limit)
+        playerState.statsRadar[type] = Math.min(100, playerState.statsRadar[type] + amount);
+        localStorage.setItem('statsRadar', JSON.stringify(playerState.statsRadar));
+        document.dispatchEvent(new CustomEvent('stateUpdated', { detail: playerState }));
+    }
 }
