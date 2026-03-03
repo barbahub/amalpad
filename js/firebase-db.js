@@ -1,26 +1,37 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, linkWithPopup } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, increment, collection, query, orderBy, limit, getDocs, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+// File: js/firebase-db.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, linkWithPopup } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, increment, collection, query, orderBy, limit, getDocs, where } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging.js";
 
+// Import State!
+import { playerState } from './state.js';
+import { updatePlayerUI } from './player.js';
+
+// --- CONFIG FIREBASE ANDA ---
 const firebaseConfig = {
-    apiKey: "AIzaSyDxabPizF0ShqaQSaJ142Rapxa9JcNq65o",
-    authDomain: "amalin-app.firebaseapp.com",
-    projectId: "amalin-app",
-    storageBucket: "amalin-app.firebasestorage.app",
-    messagingSenderId: "745183481034",
-    appId: "1:745183481034:web:23b7ba95bf02c355c8f833"
+    apiKey: "AIzaSyDE_xxx", // PASTIKAN API KEY ANDA BENAR DI SINI!
+    authDomain: "amalpad-f7a60.firebaseapp.com",
+    projectId: "amalpad-f7a60",
+    storageBucket: "amalpad-f7a60.firebasestorage.app",
+    messagingSenderId: "598444154942",
+    appId: "1:598444154942:web:6ee1e9389e81b6dcfe1bb5",
+    measurementId: "G-MDFG1QZ44L"
 };
 
+// Inisialisasi!
 const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const firestoreDb = getFirestore(app);
 const auth = getAuth(app);
-const db = getFirestore(app);
 const messaging = getMessaging(app);
 const provider = new GoogleAuthProvider();
+let currentUserUid = null;
 
 // Simpan objek penting ke global
 window.auth = auth;
-window.db = db;
+window.firestoreDb = firestoreDb;
 window.getDocs = getDocs;
 window.query = query;
 window.collection = collection;
@@ -52,7 +63,7 @@ window.fetchLeaderboard = async function() {
     
     try {
         if (typeof window.currentLbTab === 'undefined' || window.currentLbTab === 'individu') {
-            const qLeaderboard = query(collection(db, "users"), orderBy("monthly_exp", "desc"), limit(10));
+            const qLeaderboard = query(collection(firestoreDb, "users"), orderBy("monthly_exp", "desc"), limit(10));
             const snapshot = await getDocs(qLeaderboard);
             lbContainer.innerHTML = ''; let rank = 1;
             
@@ -102,7 +113,7 @@ window.fetchLeaderboard = async function() {
             if(rank === 1) lbContainer.innerHTML = '<div class="text-center text-xs py-4 text-indigo-200">Belum ada yang aktif bulan ini. Curi start sekarang!</div>';
         } else {
             // TAB CIRCLE
-            const qCircleRank = query(collection(db, "circles"), orderBy("total_exp", "desc"), limit(10));
+            const qCircleRank = query(collection(firestoreDb, "circles"), orderBy("total_exp", "desc"), limit(10));
             const snapshot = await getDocs(qCircleRank);
             lbContainer.innerHTML = ''; let rank = 1;
             
@@ -149,8 +160,8 @@ window.syncExpToFirebase = (expVal) => {
     syncTimeout = setTimeout(async () => {
         const finalExp = pendingExpSync; pendingExpSync = 0; 
         try { 
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { total_exp: increment(finalExp), monthly_exp: increment(finalExp) });
-            if(window.userCircleId) { await updateDoc(doc(db, "circles", window.userCircleId), { total_exp: increment(finalExp) }); window.fetchCircleData(window.userCircleId); }
+            await updateDoc(doc(firestoreDb, "users", auth.currentUser.uid), { total_exp: increment(finalExp), monthly_exp: increment(finalExp) });
+            if(window.userCircleId) { await updateDoc(doc(firestoreDb, "circles", window.userCircleId), { total_exp: increment(finalExp) }); window.fetchCircleData(window.userCircleId); }
         } catch (e) { console.warn("Firebase sync limit reached, retrying later."); }
     }, 2000); 
 };
@@ -158,7 +169,7 @@ window.syncExpToFirebase = (expVal) => {
 window.syncProfileToFirebase = async () => {
     const user = auth.currentUser; if(!user || user.isAnonymous) return;
     try { 
-        await updateDoc(doc(db, "users", user.uid), { 
+        await updateDoc(doc(firestoreDb, "users", user.uid), { 
             name: nameInputFire ? nameInputFire.value : "Player", 
             bio: bioInputFire ? bioInputFire.value : "", 
             quote: quoteInputFire ? quoteInputFire.value : "" 
@@ -174,7 +185,7 @@ if(quoteInputFire) quoteInputFire.addEventListener('change', window.syncProfileT
 window.syncStatsToFirebase = async () => {
     const user = auth.currentUser; if(!user || user.isAnonymous) return;
     try { 
-        await updateDoc(doc(db, "users", user.uid), { 
+        await updateDoc(doc(firestoreDb, "users", user.uid), { 
             statsRadar: window.statsRadar, 
             activityHistory: window.activityHistory,
             streakNum: parseInt(localStorage.getItem('streakNum') || 0),
@@ -193,7 +204,7 @@ if(btnEditProfile) {
             try {
                 let updateData = { name: newName };
                 if(newPhoto && newPhoto.trim() !== "") updateData.photo = newPhoto;
-                await updateDoc(doc(db, "users", auth.currentUser.uid), updateData);
+                await updateDoc(doc(firestoreDb, "users", auth.currentUser.uid), updateData);
                 
                 if(nameInputFire) nameInputFire.value = newName; 
                 localStorage.setItem('userName', newName);
@@ -219,7 +230,7 @@ const selisihMingguGlobal = Math.floor(Math.max(0, todayFB - tglRilisFB) / (1000
 const misiSaatIni = daftarMisiGlobal[selisihMingguGlobal % daftarMisiGlobal.length];
 const nomorMinggu = selisihMingguGlobal + 1; 
 
-const globalMisiRef = doc(db, "global_stats", `misi_minggu_ke_${nomorMinggu}`);
+const globalMisiRef = doc(firestoreDb, "global_stats", `misi_minggu_ke_${nomorMinggu}`);
 window.fetchGlobalProgress = async function() {
     try {
         const docSnap = await getDoc(globalMisiRef);
@@ -265,7 +276,7 @@ const circleCoopQuests = [
 window.fetchCircleData = async (circleId) => {
     if(!circleId) { if(unjoinedUI) unjoinedUI.classList.remove('hidden'); if(joinedUI) joinedUI.classList.add('hidden'); return; }
     try {
-        const snap = await getDoc(doc(db, "circles", circleId));
+        const snap = await getDoc(doc(firestoreDb, "circles", circleId));
         if(snap.exists()) {
             const data = snap.data();
             if(unjoinedUI) unjoinedUI.classList.add('hidden'); 
@@ -315,7 +326,7 @@ window.fetchCircleData = async (circleId) => {
             let memberHtml = '';
             for (let uid of data.members) {
                 let isMe = (uid === auth.currentUser?.uid); let isOwner = (uid === circleOwnerId);
-                let userSnap = await getDoc(doc(db, "users", uid));
+                let userSnap = await getDoc(doc(firestoreDb, "users", uid));
                 let uname = userSnap.exists() ? userSnap.data().name : "User Misterius";
                 let kickBtn = '';
                 if (auth.currentUser?.uid === circleOwnerId && !isOwner) { kickBtn = `<button onclick="window.kickMember('${uid}')" class="text-[8px] bg-red-500/80 px-1.5 rounded text-white hover:bg-red-600">Kick</button>`; }
@@ -330,7 +341,7 @@ window.contributeCircleQuest = async function(qId) {
     let amount = parseInt(prompt("Berapa banyak jumlah yang mau disumbangkan dari usahamu hari ini? (Hati-hati, sumbangan palsu dosanya ditanggung sendiri 🗿):", "10"));
     if(!amount || isNaN(amount) || amount <= 0) return;
     try {
-        const circleRef = doc(db, "circles", window.userCircleId);
+        const circleRef = doc(firestoreDb, "circles", window.userCircleId);
         await updateDoc(circleRef, { [`coop_progress.${qId}`]: increment(amount), total_exp: increment(amount * 2) });
         alert("Sumbangan berhasil masuk ke Circle! (+Bonus EXP Guild)");
         window.fetchCircleData(window.userCircleId);
@@ -345,7 +356,7 @@ if(btnEditCircle) {
         if(newLogo || newMotto) {
             let updates = {}; if(newLogo) updates.logo = newLogo; if(newMotto) updates.motto = newMotto;
             try {
-                await updateDoc(doc(db, "circles", window.userCircleId), updates);
+                await updateDoc(doc(firestoreDb, "circles", window.userCircleId), updates);
                 window.fetchCircleData(window.userCircleId);
                 alert("Berhasil mengupdate identitas Circle!");
             } catch(e) { alert("Gagal: " + e.message); }
@@ -356,12 +367,12 @@ if(btnEditCircle) {
 window.kickMember = async (targetUid) => {
     if(!confirm("Tendang member ini dari Circle?")) return;
     try {
-        const circleRef = doc(db, "circles", window.userCircleId);
+        const circleRef = doc(firestoreDb, "circles", window.userCircleId);
         const circleSnap = await getDoc(circleRef);
         let currentMembers = circleSnap.data().members;
         let newMembers = currentMembers.filter(id => id !== targetUid);
         await updateDoc(circleRef, { members: newMembers });
-        await updateDoc(doc(db, "users", targetUid), { circle_id: null });
+        await updateDoc(doc(firestoreDb, "users", targetUid), { circle_id: null });
         alert("Member berhasil di-kick!"); window.fetchCircleData(window.userCircleId);
     } catch(e) { alert("Error kick: " + e.message); }
 };
@@ -371,12 +382,12 @@ if(btnLeaveCircle) {
     btnLeaveCircle.addEventListener('click', async () => {
         if(!confirm("Yakin ingin keluar dari Circle ini? EXP yang sudah disumbangkan tidak bisa ditarik lho!")) return;
         try {
-            const circleRef = doc(db, "circles", window.userCircleId);
+            const circleRef = doc(firestoreDb, "circles", window.userCircleId);
             const circleSnap = await getDoc(circleRef);
             let currentMembers = circleSnap.data().members;
             let newMembers = currentMembers.filter(id => id !== auth.currentUser.uid);
             await updateDoc(circleRef, { members: newMembers });
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { circle_id: null });
+            await updateDoc(doc(firestoreDb, "users", auth.currentUser.uid), { circle_id: null });
             window.userCircleId = null; alert("Berhasil keluar dari Circle."); window.fetchCircleData(null);
         } catch(e) { alert("Error: " + e.message); }
     });
@@ -415,8 +426,8 @@ if(btnCreateCircle) {
         const newCircleId = `circle_${Date.now()}`;
         
         try {
-            await setDoc(doc(db, "circles", newCircleId), { name: circleName, invite_code: inviteCode, members: [auth.currentUser.uid], total_exp: 0, created_by: auth.currentUser.uid });
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { circle_id: newCircleId, koin: window.totalKoin, totalKoin: window.totalKoin, inventory: window.inventory });
+            await setDoc(doc(firestoreDb, "circles", newCircleId), { name: circleName, invite_code: inviteCode, members: [auth.currentUser.uid], total_exp: 0, created_by: auth.currentUser.uid });
+            await updateDoc(doc(firestoreDb, "users", auth.currentUser.uid), { circle_id: newCircleId, koin: window.totalKoin, totalKoin: window.totalKoin, inventory: window.inventory });
             window.userCircleId = newCircleId;
             alert(`Berhasil! Circle "${circleName}" aktif. Saldo terpotong 500 Koin & 1 Tiket Pendiri.\nKode Invite: ${inviteCode}\nBagikan kode ini ke temanmu!`);
             window.fetchCircleData(newCircleId);
@@ -433,7 +444,7 @@ if(btnJoinCircle) {
         if(!code) return;
 
         try {
-            const q = query(collection(db, "circles"), where("invite_code", "==", code.toUpperCase()));
+            const q = query(collection(firestoreDb, "circles"), where("invite_code", "==", code.toUpperCase()));
             const querySnapshot = await getDocs(q);
             if(querySnapshot.empty) return alert("Waduh, Circle tidak ditemukan! Cek lagi kodenya.");
          
@@ -443,8 +454,8 @@ if(btnJoinCircle) {
             if(circleData.members.length >= 10) return alert("Circle ini sudah penuh (Max 10)!");
             if(circleData.members.includes(auth.currentUser.uid)) return alert("Kamu sudah gabung di sini!");
          
-            await updateDoc(doc(db, "circles", foundCircleId), { members: arrayUnion(auth.currentUser.uid) });
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { circle_id: foundCircleId });
+            await updateDoc(doc(firestoreDb, "circles", foundCircleId), { members: arrayUnion(auth.currentUser.uid) });
+            await updateDoc(doc(firestoreDb, "users", auth.currentUser.uid), { circle_id: foundCircleId });
             window.userCircleId = foundCircleId;
             alert(`Mantap! Berhasil gabung ke Circle "${circleData.name}"!`);
             window.fetchCircleData(foundCircleId);
@@ -460,7 +471,7 @@ async function requestNotificationPermission() {
         if (permission === 'granted') {
             const token = await getToken(messaging, { vapidKey: 'GANTI_DENGAN_VAPID_KEY_FIREBASE_KAMU' });
             if (token) {
-                if(auth.currentUser && !auth.currentUser.isAnonymous) { await updateDoc(doc(db, "users", auth.currentUser.uid), { fcmToken: token }); }
+                if(auth.currentUser && !auth.currentUser.isAnonymous) { await updateDoc(doc(firestoreDb, "users", auth.currentUser.uid), { fcmToken: token }); }
                 btnEnableNotif.classList.add('hidden'); alert("Alhamdulillah, Pengingat Ibadah diaktifkan!");
             }
         } else { alert("Akses notifikasi ditolak."); }
@@ -501,7 +512,7 @@ onAuthStateChanged(auth, async (user) => {
         if(user.uid === "UID_ADMIN_KAMU_DISINI" && btnAdminReset) { btnAdminReset.classList.remove('hidden'); btnAdminReset.classList.add('block'); }
         if(Notification.permission !== 'granted' && btnEnableNotif) btnEnableNotif.classList.remove('hidden');
 
-        const userRef = doc(db, "users", user.uid);
+        const userRef = doc(firestoreDb, "users", user.uid);
         const docSnap = await getDoc(userRef);
         const currentMonthStr = `${window.today ? window.today.getMonth() + 1 : new Date().getMonth() + 1}-${window.today ? window.today.getFullYear() : new Date().getFullYear()}`;
      
@@ -652,7 +663,7 @@ window.saveShopDataToFirebase = async function() {
         return;
     }
     try {
-        const userRef = doc(db, "users", auth.currentUser.uid);
+        const userRef = doc(firestoreDb, "users", auth.currentUser.uid);
         await updateDoc(userRef, {
             totalKoin: window.totalKoin,
             koin: window.totalKoin, // backup format lama
