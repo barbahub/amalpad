@@ -38,7 +38,10 @@ window.donateKoinToCircle = function(amount) {
         } else {
             alert(`🤝 Jazakallah Khairan! Berhasil menyumbang ${amount} Koin ke Circle.`);
             if(typeof window.pushToLiveFeed === 'function') {
-                window.pushToLiveFeed(playerState.name || "Kamu", `Menyumbang Koin ke Circle`, 'donate', amount, playerState.equippedItems);
+                // SAFETY CHECK: Pastikan playerState ada sebelum diakses
+                const userName = (playerState && playerState.name) ? playerState.name : "Kamu";
+                const eqItems = (playerState && playerState.equippedItems) ? playerState.equippedItems : {};
+                window.pushToLiveFeed(userName, `Menyumbang Koin ke Circle`, 'donate', amount, eqItems);
             }
         }
         
@@ -58,9 +61,9 @@ window.pushToLiveFeed = function(title, desc, type = 'task', extraValue = null, 
 
     if(feedContainer.querySelector('p.text-gray-400')) feedContainer.innerHTML = ''; 
 
-    // Jika tidak dioper, ambil milik user sendiri dari state
+    // SAFETY CHECK: Jika tidak dioper, ambil milik user sendiri secara aman
     if(!equipped) {
-        equipped = playerState.equippedItems || {};
+        equipped = (playerState && playerState.equippedItems) ? playerState.equippedItems : {};
     }
 
     let fxStyles = window.previewStyles || {};
@@ -133,7 +136,8 @@ window.showUserPopup = function(name, lastQuest, initial, simulatedExp = null) {
         if(document.getElementById('popup-bio')) document.getElementById('popup-bio').innerText = `"${(inputName && name === inputName.value) ? (inputBio.value || 'Tetap semangat walau badai menerjang.') : 'Pejuang Jalur Langit.'}"`;
         if(document.getElementById('popup-avatar')) document.getElementById('popup-avatar').innerText = initial;
         
-        let targetExp = simulatedExp !== null ? simulatedExp : playerState.exp;
+        // SAFETY CHECK: playerState bisa null
+        let targetExp = simulatedExp !== null ? simulatedExp : ((playerState && playerState.exp) ? playerState.exp : 0);
         let info = window.calculateLevelInfo ? window.calculateLevelInfo(targetExp) : {level: 1};
         let titleStr = window.getTitle ? window.getTitle(info.level) : "Warga Baru";
         
@@ -284,34 +288,43 @@ window.closeCirclePopup = function(e) {
 // ============================================================
 const dummyNames = ["Bima_Sigma", "Putri.Skuy", "Abdi_Pusat", "Rina_Chill", "Deni_Core"];
 
-// Injeksi awal agar tidak kosong
+// Injeksi awal agar tidak kosong (Dengan Try-Catch)
 setTimeout(() => {
-    const feedContainer = document.getElementById('live-feed-container');
-    if(feedContainer && feedContainer.children.length === 1) {
-        window.pushToLiveFeed("Sirkel Akhirat", "Mencapai Level 5 (Perintis Langit)!", "circle_update", 12000);
-        window.pushToLiveFeed("Bima_Sigma", "Menyumbang 1000 Koin ke Circle", "donate", 1000);
+    try {
+        const feedContainer = document.getElementById('live-feed-container');
+        if(feedContainer && feedContainer.children.length === 1) {
+            window.pushToLiveFeed("Sirkel Akhirat", "Mencapai Level 5 (Perintis Langit)!", "circle_update", 12000);
+            window.pushToLiveFeed("Bima_Sigma", "Menyumbang 1000 Koin ke Circle", "donate", 1000);
+        }
+    } catch(e) {
+        console.warn("Gagal render dummy feed awal:", e);
     }
 }, 2000);
 
+// Interval Dummy (Dengan Try-Catch)
 setInterval(() => {
-    let rand = Math.random();
-    let rName = dummyNames[Math.floor(Math.random() * dummyNames.length)];
-    
-    if(rand > 0.6 && window.dailyQuests) {
-        let rQuest = window.dailyQuests[Math.floor(Math.random() * window.dailyQuests.length)];
-        window.pushToLiveFeed(rName, `Menyelesaikan ${rQuest.title}`, 'task', rQuest.exp);
-    } else if (rand > 0.3) {
-        let levels = [10, 20, 30, 40, 50];
-        let rLvl = levels[Math.floor(Math.random() * levels.length)];
-        let rTitle = window.getTitle ? window.getTitle(rLvl) : "Suhu";
-        window.pushToLiveFeed(rName, `Naik ke Level ${rLvl} (${rTitle})!`, 'user_level');
-    } else {
-        let circleNames = ["Pejuang Subuh", "Sirkel Akhirat", "Skena Hijrah", "Pasukan Langit"];
-        let cName = circleNames[Math.floor(Math.random() * circleNames.length)];
-        let cLvls = [2, 5, 10, 15, 20];
-        let cLvl = cLvls[Math.floor(Math.random() * cLvls.length)];
-        let dummyExp = window.getGuildExpRequirement(cLvl) + Math.floor(Math.random() * 500);
-        window.pushToLiveFeed(cName, `Mencapai Level ${cLvl} (${window.getCircleTitle(cLvl)})!`, 'circle_update', dummyExp);
+    try {
+        let rand = Math.random();
+        let rName = dummyNames[Math.floor(Math.random() * dummyNames.length)];
+        
+        if(rand > 0.6 && window.dailyQuests) {
+            let rQuest = window.dailyQuests[Math.floor(Math.random() * window.dailyQuests.length)];
+            window.pushToLiveFeed(rName, `Menyelesaikan ${rQuest.title}`, 'task', rQuest.exp);
+        } else if (rand > 0.3) {
+            let levels = [10, 20, 30, 40, 50];
+            let rLvl = levels[Math.floor(Math.random() * levels.length)];
+            let rTitle = window.getTitle ? window.getTitle(rLvl) : "Suhu";
+            window.pushToLiveFeed(rName, `Naik ke Level ${rLvl} (${rTitle})!`, 'user_level');
+        } else {
+            let circleNames = ["Pejuang Subuh", "Sirkel Akhirat", "Skena Hijrah", "Pasukan Langit"];
+            let cName = circleNames[Math.floor(Math.random() * circleNames.length)];
+            let cLvls = [2, 5, 10, 15, 20];
+            let cLvl = cLvls[Math.floor(Math.random() * cLvls.length)];
+            let dummyExp = window.getGuildExpRequirement(cLvl) + Math.floor(Math.random() * 500);
+            window.pushToLiveFeed(cName, `Mencapai Level ${cLvl} (${window.getCircleTitle(cLvl)})!`, 'circle_update', dummyExp);
+        }
+    } catch(e) {
+        console.warn("Gagal render dummy feed interval:", e);
     }
 }, 12000);
 
@@ -403,8 +416,6 @@ function initRekapSystem() {
     if(!btnRekap) return;
 
     const today = new Date();
-    // Buka akses khusus di akhir bulan (Tanggal 28 ke atas). 
-    // TIP: Jika kamu mau test sekarang juga, ganti angka 28 menjadi 1 sementara waktu.
     const isEndOfMonth = today.getDate() >= 28; 
 
     if (isEndOfMonth) {
@@ -412,9 +423,6 @@ function initRekapSystem() {
         btnRekap.innerHTML = "🛡️ Buka Rekap Circle!";
         
         btnRekap.addEventListener('click', () => {
-            // Dummy bypass check untuk preview standalone
-            // if (!window.userCircleId) { ... }
-
             const circleNameEl = document.getElementById('circle-name-display');
             const circleName = circleNameEl ? circleNameEl.innerText : "Circleku";
             
@@ -425,7 +433,8 @@ function initRekapSystem() {
             const circleExpText = circleExpEl ? circleExpEl.innerText.replace(/\./g, '') : "1000";
             const circleExpTotal = parseInt(circleExpText) || 1000; 
 
-            const userExp = playerState.exp || 0;
+            // SAFETY CHECK: playerState diamankan
+            const userExp = (playerState && playerState.exp) ? playerState.exp : 0;
             let percent = (userExp / circleExpTotal) * 100;
             if (percent > 100) percent = 100; 
             if (isNaN(percent)) percent = 0;
