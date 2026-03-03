@@ -1,8 +1,3 @@
-// File: js/quests.js
-// Fungsi: Mengatur Misi, Sholat, Tasbih, Hukuman, dan Gacha
-
-import { playerState, addExp, addKoin, addRadarStat } from './state.js';
-
 // --- 5. RENDER SHOLAT WAJIB ---
 window.sholatWajib = [
     { id: "sw-subuh", title: "Sholat Subuh", start: 4, end: 5, exp: 50, type: "pusat" },
@@ -38,12 +33,9 @@ window.renderSholatWajib = function() {
             let penaltyKey = `penalty_done_${q.id}_${new Date().toDateString()}`;
             if(localStorage.getItem(penaltyKey) !== 'true') {
                 localStorage.setItem(penaltyKey, 'true');
-                
-                // Potong EXP langsung di State & trigger update
-                playerState.exp = Math.max(0, playerState.exp - 50); 
-                localStorage.setItem('totalExp', playerState.exp);
-                document.dispatchEvent(new CustomEvent('stateUpdated', { detail: playerState }));
-
+                window.totalExp = Math.max(0, window.totalExp - 50); 
+                localStorage.setItem('totalExp', window.totalExp);
+                if(window.updateStatsUI) window.updateStatsUI();
                 if(window.syncExpToFirebase) window.syncExpToFirebase(-50);
                 setTimeout(() => alert(`⚠️ ASTAGHFIRULLAH!\nKamu ketahuan melewati batas waktu ${q.title}!\n\nHukuman Instan: -50 EXP.`), 600);
             }
@@ -79,12 +71,13 @@ window.renderSholatWajib = function() {
             localStorage.setItem(this.id, 'true');
             this.disabled = true; 
             
-            let finalExp = playerState.vipBuff ? parseInt(this.getAttribute('data-exp')) * 2 : parseInt(this.getAttribute('data-exp'));
-            
-            // Gunakan sistem modular
-            addExp(finalExp);
-            addKoin(finalExp);
-            addRadarStat('pusat', 5);
+            let finalExp = typeof window.vipBuff !== 'undefined' && window.vipBuff ? parseInt(this.getAttribute('data-exp')) * 2 : parseInt(this.getAttribute('data-exp'));
+            window.totalExp += finalExp; window.totalKoin += finalExp; 
+            localStorage.setItem('totalExp', window.totalExp); 
+            localStorage.setItem('totalKoin', window.totalKoin);
+            const koinDisplay = document.getElementById('koin-display');
+            if(koinDisplay) koinDisplay.innerText = window.totalKoin; 
+            if(window.updateStatsUI) window.updateStatsUI();
             
             if(window.syncExpToFirebase) window.syncExpToFirebase(finalExp);
             if(typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
@@ -219,9 +212,9 @@ window.checkEpicComboUnlock = function(showPopup = false) {
 window.checkEpicComboUnlock(false); 
 
 // --- 6.5 VIP EVENT PUASA SENIN KAMIS ---
-const dDay = window.today ? window.today.getDay() : new Date().getDay(); 
-const dHour = window.today ? window.today.getHours() : new Date().getHours();
+const dDay = window.today.getDay(); const dHour = window.today.getHours();
 const isVIPEvent = (dDay === 1 || dDay === 4) || (dDay === 0 && dHour >= 18) || (dDay === 3 && dHour >= 18);
+window.vipBuff = localStorage.getItem('vip_buff_active') === 'true';
 
 if(isVIPEvent && epicContainer) {
     epicContainer.innerHTML += `
@@ -241,7 +234,7 @@ if(isVIPEvent && epicContainer) {
         </div>
     `;
 } else {
-    localStorage.setItem('vip_buff_active', 'false'); playerState.vipBuff = false;
+    localStorage.setItem('vip_buff_active', 'false'); window.vipBuff = false;
 }
 
 const chkContainer = document.getElementById('checklist-container');
@@ -404,11 +397,12 @@ const tasbihTargetText = document.getElementById('tasbih-target-text');
 window.applyTasbihSkin = function() {
     if(!tasbihBtn) return;
     
-    // Ambil data equip dari state.js
-    let equipped = playerState.equippedItems || {};
+    // Ambil data equip yang paling fresh
+    let equipped = {};
+    try { equipped = JSON.parse(localStorage.getItem('equippedItems')) || {}; } catch(e) {}
     let skinId = equipped.tasbih_skin || 'tasbih_kayu';
     
-    // Reset class bawaan
+    // Reset class bawaan (hapus warna/border lama, sisakan layout dasar)
     tasbihBtn.className = "w-32 h-32 rounded-full flex items-center justify-center text-5xl font-black shadow-inner active:scale-90 transition-all backdrop-blur-md border-[6px]";
     
     // Inject gaya sesuai Skin
@@ -425,6 +419,7 @@ window.applyTasbihSkin = function() {
     }
 };
 
+// Panggil saat load & listen kalau ada perubahan
 window.applyTasbihSkin();
 
 if(tasbihCustomInput) {
@@ -458,20 +453,18 @@ if (tasbihBtn) {
         if (navigator.vibrate) navigator.vibrate(30); 
      
         if (window.tasbihCount === 33) {
-            let bonusExp = playerState.vipBuff ? 10 : 5; 
-            
-            addExp(bonusExp);
-            addKoin(10);
-            
+            let bonusExp = window.vipBuff ? 10 : 5; window.totalKoin += 10; window.totalExp += bonusExp;
+            localStorage.setItem('totalKoin', window.totalKoin); localStorage.setItem('totalExp', window.totalExp);
+            document.getElementById('koin-display').innerText = window.totalKoin; 
+            if(window.updateStatsUI) window.updateStatsUI();
             if(typeof confetti === 'function') confetti({ particleCount: 60, spread: 50, origin: { y: 0.8 } });
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
             setTimeout(() => alert("Alhamdulillah! Target 33x tercapai. Koin bertambah!\nLanjut ke 1000x untuk dapat Mega EXP!"), 200);
         }
         if (window.tasbihCount === 1000) {
-            let bonusExp = playerState.vipBuff ? 1000 : 500; 
-            
-            addExp(bonusExp); 
-            
+            let bonusExp = window.vipBuff ? 1000 : 500; window.totalExp += bonusExp; 
+            localStorage.setItem('totalExp', window.totalExp); 
+            if(window.updateStatsUI) window.updateStatsUI();
             if(typeof confetti === 'function') confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
             if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
             setTimeout(() => alert("MashaAllah! Kamu mencapai 1000x Dzikir.\nEXP Bonus diberikan!"), 200);
@@ -493,6 +486,7 @@ window.updateTasbihUI();
 const todayStr = new Date().toDateString();
 let lastVisitStr = localStorage.getItem('lastVisit');
 
+// FIX: Gunakan penamaan variabel yang seragam 'streakNum' 
 window.streakNum = parseInt(localStorage.getItem('streakNum') || 0);
 
 if (lastVisitStr && lastVisitStr !== todayStr) {
@@ -513,11 +507,8 @@ if (lastVisitStr && lastVisitStr !== todayStr) {
     }
 
     if(penaltyExp > 0) {
-        // Potong EXP dan trigger state update
-        playerState.exp = Math.max(0, playerState.exp - penaltyExp);
-        localStorage.setItem('totalExp', playerState.exp);
-        document.dispatchEvent(new CustomEvent('stateUpdated', { detail: playerState }));
-
+        window.totalExp = Math.max(0, window.totalExp - penaltyExp);
+        localStorage.setItem('totalExp', window.totalExp);
         let alertMsg = `⚠️ LAPORAN JALUR LANGIT KEMARIN ⚠️\n\n`;
         if(missedSholat > 0) alertMsg += `- Kamu meninggalkan ${missedSholat} Waktu Sholat!\n`;
         if(gachaFailed) alertMsg += `- Kamu mengabaikan Misi Gacha Wajib!\n`;
@@ -528,6 +519,7 @@ if (lastVisitStr && lastVisitStr !== todayStr) {
 
     if (localStorage.getItem('completedYesterday') !== 'true' && !isStreakLost) window.streakNum = 0;
     
+    // FIX: Simpan ke key 'streakNum' yang valid. Hapus lastStreakClaim jika streak putus
     localStorage.setItem('streakNum', window.streakNum);
     if(window.streakNum === 0) {
         localStorage.setItem('lastStreakClaim', '');
@@ -550,7 +542,7 @@ if(streakDisplay && window.streakNum > 0) streakDisplay.innerText = `🔥 ${wind
 
 window.attachChecklistListeners = function() {
     document.querySelectorAll('.checklist-item').forEach(box => {
-        if (localStorage.getItem(box.id) === 'true') { box.checked = true; box.disabled = true; if(box.id === 'vip-puasa-buff') playerState.vipBuff = true; }
+        if (localStorage.getItem(box.id) === 'true') { box.checked = true; box.disabled = true; if(box.id === 'vip-puasa-buff') window.vipBuff = true; }
         let newBox = box.cloneNode(true); box.parentNode.replaceChild(newBox, box);
      
         newBox.addEventListener('change', function() {
@@ -558,25 +550,27 @@ window.attachChecklistListeners = function() {
             localStorage.setItem(this.id, 'true'); this.disabled = true; 
             
             if(this.id === 'vip-puasa-buff') {
-                localStorage.setItem('vip_buff_active', 'true'); playerState.vipBuff = true;
+                localStorage.setItem('vip_buff_active', 'true'); window.vipBuff = true;
                 alert("🎉 JALUR VIP AKTIF! Semua ibadahmu hari ini akan dikalikan 2 EXP-nya!");
             }
             
             let expVal = parseInt(this.getAttribute('data-exp') || 0);
-            let finalExp = playerState.vipBuff ? expVal * 2 : expVal;
+            let finalExp = window.vipBuff ? expVal * 2 : expVal;
             let questType = this.getAttribute('data-type') || 'pusat';
             let questTitle = this.getAttribute('data-title') || "Selesaikan Misi";
             
-            // Eksekusi Poin lewat State Moduler
-            addExp(finalExp);
-            addKoin(finalExp);
-            addRadarStat(questType, 5);
+            window.totalExp += finalExp; window.totalKoin += finalExp; 
+            
+            if(window.statsRadar[questType] !== undefined) {
+                window.statsRadar[questType] = Math.min(100, window.statsRadar[questType] + 5); 
+            }
+            localStorage.setItem('statsRadar', JSON.stringify(window.statsRadar));
 
             if(window.renderCharts) window.renderCharts();
             if(window.logActivityForHeatmap) window.logActivityForHeatmap(); 
             
-            const username = playerState.name || "Kamu";
-            if(window.pushToLiveFeed) window.pushToLiveFeed(username, `Menyelesaikan ${questTitle}`, 'task', finalExp);
+            const username = document.getElementById('user-name') ? document.getElementById('user-name').value : "Kamu";
+            if(window.pushToLiveFeed) window.pushToLiveFeed(username || "Kamu", `Menyelesaikan ${questTitle}`, 'task', finalExp);
 
             if(typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -585,16 +579,23 @@ window.attachChecklistListeners = function() {
             if(window.syncExpToFirebase) window.syncExpToFirebase(finalExp);
             if(window.syncStatsToFirebase) window.syncStatsToFirebase();
             if(window.updateBadges) window.updateBadges();
+            
+            localStorage.setItem('totalExp', window.totalExp); 
+            localStorage.setItem('totalKoin', window.totalKoin);
+            const koinDisplay = document.getElementById('koin-display');
+            if(koinDisplay) koinDisplay.innerText = window.totalKoin;
+            if(window.updateStatsUI) window.updateStatsUI();
 
             let anyChecked = document.querySelectorAll('.checklist-item:checked').length > 0;
             if (anyChecked) {
                 localStorage.setItem('completedYesterday', 'true');
+                // FIX: Auto-streak disinkronisasi dengan tombol klaim agar tidak mereset satu sama lain
                 if (window.streakNum === 0 && lastVisitStr === todayStr) {
                     window.streakNum = 1; 
                     localStorage.setItem('streakNum', window.streakNum); 
                     localStorage.setItem('lastStreakClaim', todayStr);
                     if(streakDisplay) streakDisplay.innerText = `🔥 ${window.streakNum}`;
-                    if(window.initStreakSystem) window.initStreakSystem(); 
+                    if(window.initStreakSystem) window.initStreakSystem(); // Render ulang tombol claim
                 }
             }
             if (typeof window.checkEpicComboUnlock === 'function') window.checkEpicComboUnlock(true); 
