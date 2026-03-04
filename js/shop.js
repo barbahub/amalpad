@@ -488,8 +488,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderFeaturedItems();
 });
 
-// Listener dari brankas state.js, setiap data berubah, otomatis re-render isi toko
+// Cegah UI lag saat user melakukan banyak task
+let shopRenderTimer;
 document.addEventListener('stateUpdated', () => {
-    window.renderShop();
-    window.renderFeaturedItems();
+    clearTimeout(shopRenderTimer);
+    shopRenderTimer = setTimeout(() => {
+        window.renderShop();
+        window.renderFeaturedItems();
+    }, 100);
 });
