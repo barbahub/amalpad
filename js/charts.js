@@ -236,10 +236,12 @@ setTimeout(() => {
     renderCharts();
 }, 500);
 
-// Auto-update dengan Throttling minimal
+// Menggunakan teknik Debounce untuk mencegah re-render berlapis
+let chartRenderTimer;
 document.addEventListener('stateUpdated', () => {
-    setTimeout(() => {
+    clearTimeout(chartRenderTimer);
+    chartRenderTimer = setTimeout(() => {
         updateBadges();
         renderCharts();
-    }, 50);
+    }, 100); // Tunggu 100ms hingga semua rentetan state mutator selesai
 });
