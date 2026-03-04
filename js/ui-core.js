@@ -87,22 +87,27 @@ if(darkToggle) {
     });
 }
 
-// --- 3. TAB NAVIGASI ---
-const views = { 
-    home: document.getElementById('view-home'), 
-    target: document.getElementById('view-target'), 
-    profile: document.getElementById('view-profile') 
-};
-const btns = { 
-    home: document.getElementById('nav-btn-home'), 
-    target: document.getElementById('nav-btn-target'), 
-    profile: document.getElementById('nav-btn-profile') 
-};
+// --- 3. TAB NAVIGASI (REFACTORED: ANTI-CRASH & ANTI-GLITCH) ---
 
-const activeClass = "flex-1 py-2.5 flex flex-col items-center text-emerald-600 dark:text-emerald-400 transition transform scale-105 bg-emerald-50 dark:bg-emerald-900/30 rounded-3xl";
+// 🐛 FIX 1: Menambahkan class 'relative' agar titik merah notifikasi tidak loncat!
+const activeClass = "flex-1 py-2.5 flex flex-col items-center text-emerald-600 dark:text-emerald-400 transition transform scale-105 bg-emerald-50 dark:bg-emerald-900/30 rounded-3xl relative";
 const inactiveClass = "flex-1 py-2.5 flex flex-col items-center text-gray-400 hover:text-emerald-500 transition rounded-3xl relative";
 
 window.switchTab = function(tab) {
+    // 🐛 FIX 2: Mengambil elemen secara dinamis SETIAP KALI fungsi dipanggil 
+    // Mencegah error "null" jika DOM terlambat dimuat.
+    const views = { 
+        home: document.getElementById('view-home'), 
+        target: document.getElementById('view-target'), 
+        profile: document.getElementById('view-profile') 
+    };
+    const btns = { 
+        home: document.getElementById('nav-btn-home'), 
+        target: document.getElementById('nav-btn-target'), 
+        profile: document.getElementById('nav-btn-profile') 
+    };
+
+    // Sembunyikan semua tab & matikan tombol
     Object.keys(views).forEach(key => { 
         if(views[key]) {
             views[key].classList.remove('block');
@@ -113,29 +118,36 @@ window.switchTab = function(tab) {
         }
     });
     
+    // Tampilkan tab yang dipilih & hidupkan tombolnya
     if(views[tab]) {
         views[tab].classList.remove('hidden');
         views[tab].classList.add('block');
     }
     if(btns[tab]) btns[tab].className = activeClass;
     
+    // Scroll mulus ke atas
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Bind Event Listener ke tombol
-if(btns.home) btns.home.addEventListener('click', () => window.switchTab('home'));
-if(btns.target) btns.target.addEventListener('click', () => window.switchTab('target'));
-if(btns.profile) btns.profile.addEventListener('click', () => { 
-    window.switchTab('profile'); 
-    // Jeda sedikit agar elemen DOM selesai di-render sebelum chart & shop digambar
-    setTimeout(() => { 
-        if(typeof window.renderCharts === 'function') window.renderCharts();
-        if(typeof window.renderShop === 'function') window.renderShop(); 
-        if(typeof window.renderFeaturedItems === 'function') window.renderFeaturedItems();
-    }, 100); 
-});
+// 🐛 FIX 3: Memasang listener & memanggil tab default menggunakan setTimeout
+// Ini menjamin 1000% HTML sudah digambar sepenuhnya oleh browser sebelum JS beraksi.
+setTimeout(() => {
+    const btnHome = document.getElementById('nav-btn-home');
+    const btnTarget = document.getElementById('nav-btn-target');
+    const btnProfile = document.getElementById('nav-btn-profile');
 
-// Set halaman default saat pertama dimuat
-document.addEventListener('DOMContentLoaded', () => {
-    window.switchTab('target'); // Langsung buka tab Quest (target)
-});
+    if(btnHome) btnHome.onclick = () => window.switchTab('home');
+    if(btnTarget) btnTarget.onclick = () => window.switchTab('target');
+    if(btnProfile) btnProfile.onclick = () => { 
+        window.switchTab('profile'); 
+        // Render UI berat hanya saat tab Stats dibuka
+        setTimeout(() => { 
+            if(typeof window.renderCharts === 'function') window.renderCharts();
+            if(typeof window.renderShop === 'function') window.renderShop(); 
+            if(typeof window.renderFeaturedItems === 'function') window.renderFeaturedItems();
+        }, 50); 
+    };
+
+    // Langsung buka tab Quest saat pertama buka aplikasi
+    window.switchTab('target');
+}, 100);
