@@ -9,7 +9,8 @@
     <link rel="apple-touch-icon" href="icon.png">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes"> 
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Amalpad">
     <meta name="theme-color" content="#10B981">
     
@@ -179,6 +180,96 @@
             </div>
         </div>
 
+        <div id="view-target" class="hidden animate-[fadeIn_0.4s_ease-out] flex-1 pb-10">
+            <div class="p-5">
+                <div id="sholat-wajib-container" class="space-y-3 mb-6"></div>
+                <div id="flash-quest-container"></div>
+                <div id="epic-quest-container"></div>
+                <div id="checklist-container" class="space-y-3 mb-6"></div>
+                
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <button id="gacha-kebaikan-container" class="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl p-3 text-white font-bold shadow-md">
+                        🎲 Gacha Misi
+                        <p id="gacha-kebaikan-subtitle" class="text-[9px] font-normal">Klik untuk putar</p>
+                    </button>
+                    <div id="gacha-kebaikan-result" class="hidden col-span-2"></div>
+                </div>
+
+                <div class="bg-gray-800 rounded-3xl p-5 text-center flex flex-col items-center">
+                    <select id="tasbih-type" class="bg-gray-700 text-white text-xs rounded p-1 mb-4">
+                        <option value="subhanallah">Subhanallah</option>
+                        <option value="alhamdulillah">Alhamdulillah</option>
+                        <option value="allahuakbar">Allahu Akbar</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <input type="text" id="tasbih-custom-input" class="hidden text-black mb-2 px-2 py-1 rounded text-xs" placeholder="Ketik Dzikir Custom...">
+                    <button id="btn-tasbih" class="w-32 h-32 rounded-full border-[6px] text-5xl font-black shadow-inner">0</button>
+                    <p class="mt-4 text-white text-xs">Target: <span id="tasbih-target-text">33</span></p>
+                    <div class="w-full bg-gray-700 h-2 mt-2 rounded-full overflow-hidden">
+                        <div id="tasbih-bar" class="bg-emerald-500 h-full transition-all" style="width:0%"></div>
+                    </div>
+                    <button id="tasbih-reset" class="mt-4 text-[10px] text-red-400">Reset Counter</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-profile" class="hidden animate-[fadeIn_0.4s_ease-out] flex-1 pb-10">
+            <div class="p-5 space-y-6">
+                <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm text-center">
+                    <div id="avatar-initial" class="w-24 h-24 bg-emerald-500 rounded-full mx-auto flex items-center justify-center text-4xl text-white font-bold mb-3 relative z-10"></div>
+                    <input type="text" id="user-name" class="w-full text-center font-bold text-xl bg-transparent outline-none mb-1 text-gray-800 dark:text-gray-100" placeholder="Nama Kamu">
+                    <p id="display-level" class="text-xs text-gray-500">Level 1</p>
+                    <p id="display-title-bot" class="text-sm font-bold text-emerald-500 mt-1">NPC Duniawi</p>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 h-2 mt-3 rounded-full overflow-hidden">
+                        <div id="exp-bar" class="bg-emerald-500 h-full transition-all duration-1000" style="width:0%"></div>
+                    </div>
+                    <p id="display-exp" class="text-[10px] mt-1 text-gray-400 font-bold">0 / 100 EXP</p>
+                    <button id="btn-edit-profile" class="mt-3 text-[10px] bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-3 py-1.5 rounded-full transition font-bold text-gray-800 dark:text-gray-100">✏️ Edit Profil Global</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"><canvas id="radarChart"></canvas></div>
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"><canvas id="donutChart"></canvas><p id="donut-percent" class="text-center text-[10px] font-bold mt-1 text-gray-500">0%</p></div>
+                </div>
+
+                <div id="aura-badge-container"></div>
+                
+                <div>
+                    <h3 class="text-xs font-bold text-gray-500 mb-2 px-1">Jejak 7 Hari</h3>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between gap-1 overflow-x-auto" id="heatmap-container"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-bold text-gray-500 mb-2 px-1">Rak Trofi</h3>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex gap-3 overflow-x-auto hide-scrollbar snap-x" id="badge-rack-container"></div>
+                </div>
+
+                <div class="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-3xl p-4 shadow-lg">
+                    <button id="btn-toggle-shop" class="w-full flex justify-between items-center text-white font-bold outline-none">
+                        <span id="text-toggle-shop" class="flex items-center gap-2">🛒 Toko Flexing Amal</span>
+                        <span id="icon-toggle-shop" class="transform transition-transform duration-300">▼</span>
+                    </button>
+                    <div id="shop-teaser" class="mt-4"><div id="featured-items-container" class="space-y-3"></div></div>
+                    <div id="shop-content-wrapper" class="hidden mt-5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-2xl p-3 shadow-inner">
+                        <div class="flex gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1">
+                            <button class="shop-tab bg-emerald-500 text-white px-3 py-1.5 text-[10px] font-bold rounded-xl whitespace-nowrap shadow-sm" data-type="all">Semua</button>
+                            <button class="shop-tab bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-1.5 text-[10px] font-bold rounded-xl whitespace-nowrap" data-type="tasbih_skin">Tasbih</button>
+                            <button class="shop-tab bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-1.5 text-[10px] font-bold rounded-xl whitespace-nowrap" data-type="name_fx">Teks Nama</button>
+                            <button class="shop-tab bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-1.5 text-[10px] font-bold rounded-xl whitespace-nowrap" data-type="aura">Aura Profil</button>
+                            <button class="shop-tab bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-1.5 text-[10px] font-bold rounded-xl whitespace-nowrap" data-type="item">Consumable</button>
+                        </div>
+                        <div id="shop-container" class="grid grid-cols-2 gap-3"></div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3 pt-4">
+                    <button id="btn-share" class="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black py-3 rounded-2xl shadow-lg">🃏 Flex Player Card</button>
+                    <button id="btn-login" class="w-full bg-blue-500 text-white font-bold py-3 rounded-2xl">🔗 Amankan Akun (Google)</button>
+                    <button id="btn-logout" class="hidden w-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold py-3 rounded-2xl">Keluar Akun</button>
+                    <button id="btn-enable-notif" class="w-full bg-amber-500 text-white font-bold py-3 rounded-2xl">🔔 Aktifkan Pengingat</button>
+                </div>
+            </div>
+        </div>
         <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200 dark:border-gray-700 flex justify-around p-2 rounded-[2rem] shadow-2xl z-50">
             <button id="nav-btn-home" class="flex-1 py-2.5 flex flex-col items-center text-emerald-600 dark:text-emerald-400 transition transform scale-105 bg-emerald-50 dark:bg-emerald-900/30 rounded-3xl">
                 <span class="text-2xl mb-1 drop-shadow-sm">🌍</span><span class="text-[10px] font-extrabold tracking-wide">FEED</span>
